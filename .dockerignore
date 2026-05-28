@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# IDE and editor folders
+.vscode/
+.idea/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Project-specific folders
+.readmes/
+scripts/

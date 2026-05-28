@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Run app.py",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "env": {
+        "PORT": "8080"
+      },
+      "justMyCode": false
+    }
+    ,
+    {
+      "name": "Python: Flask (CLI) with reload",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "args": [
+        "run",
+        "--no-debugger",
+        "--reload",
+        "--port",
+        "8080"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "FLASK_APP": "app:proxy_app",
+        "FLASK_ENV": "development"
+      },
+      "jinja": true,
+      "justMyCode": false
+    }
+  ]
+}
