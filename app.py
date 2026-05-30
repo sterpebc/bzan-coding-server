@@ -26,28 +26,25 @@ def hello():
 
 # --- sqlite-web App ---
 # Import and configure the sqlite-web application
-try:
-    # Import the sqlite-web module so we can call initialize_app on the module
-    import sqlite_web.sqlite_web as sqlite_web_mod
-    sqlite_web_app = sqlite_web_mod.app
 
-    # Define the default configuration for sqlite-web. This will be used
-    # on the first run and saved to Firestore for subsequent runs.
-    default_sqlite_web_config = {
-        'ENABLE_LOAD': True,
-        'ENABLE_FILESYSTEM': False,
-        'READ_ONLY': True,
-        'DB_UPLOAD_DIR': None,  # Defaults to a system temp directory
-        'ROWS_PER_PAGE': 50,
-        'QUERY_ROWS_PER_PAGE': 1000,
-    }
+# Add the sqlite_web subdirectory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sqlite_web'))
 
-    sqlite_web_mod.initialize_app(default_config=default_sqlite_web_config)
-    
-except ImportError:
-    print("WARNING: sqlite-web not found. The /db endpoint will not be available.")
-    print("Please run 'pip install -e vendor/sqlite-web' to install it.")
-    sqlite_web_app = None
+import sqlite_web as sqlite_web_mod
+sqlite_web_app = sqlite_web_mod.app if sqlite_web_mod else None
+
+# Define the default configuration for sqlite-web. This will be used
+# on the first run and saved to Firestore for subsequent runs.
+default_sqlite_web_config = {
+    'ENABLE_LOAD': True,
+    'ENABLE_FILESYSTEM': False,
+    'READ_ONLY': True,
+    'DB_UPLOAD_DIR': None,  # Defaults to a system temp directory
+    'ROWS_PER_PAGE': 50,
+    'QUERY_ROWS_PER_PAGE': 1000,
+}
+
+sqlite_web_mod.initialize_app(default_config=default_sqlite_web_config)
 
 # --- Combined App ---
 # Use DispatcherMiddleware to combine the two apps.

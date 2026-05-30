@@ -6,10 +6,5 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-if [ "${MODE:-}" = "dev" ]; then
-  echo "Starting in dev mode: python app.py"
-  exec python app.py
-else
-  echo "Starting in prod mode: gunicorn --bind 0.0.0.0:8080 app:application"
-  exec gunicorn --bind 0.0.0.0:8080 app:application
-fi
+# If no arguments are provided, the Dockerfile's CMD will be executed by the shell.
+# This script's purpose is to allow overriding the CMD.

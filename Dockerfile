@@ -16,9 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy and install dependencies
 COPY requirements.txt ./
-COPY vendor/sqlite-web ./vendor/sqlite-web
-RUN pip install --no-cache-dir "setuptools<81"
-RUN pip install --no-cache-dir -r requirements.txt
+# Install all Python dependencies in a single, consolidated RUN command
+RUN pip install --no-cache-dir "setuptools<81" -r requirements.txt
 
 # Copy application code and helper scripts
 COPY . .
@@ -38,4 +37,4 @@ ENV MODE=prod
 EXPOSE 8080
 
 # Default to production gunicorn server if nothing else provided
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--bind", "127.0.0.1:8080", "app:application"]

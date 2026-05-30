@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 __version__ = '0.7.2'
 
 import base64
@@ -9,6 +7,7 @@ import logging
 import operator
 import os
 import re
+import sys
 import tempfile
 import threading
 import time
@@ -24,7 +23,7 @@ from werkzeug.routing import BaseConverter
 from werkzeug.utils import secure_filename
 
 try:
-    from . import datastore
+    import datastore
 except ImportError:
     datastore = None
 
@@ -91,6 +90,10 @@ app = Flask(
 app.config.from_object(__name__)
 datasets = {}
 dataset_config = {}
+
+def die(message):
+    sys.stderr.write('%s\n' % message)
+    sys.exit(1)
 
 # --- State Management ---
 # The `datasets` dictionary holds the in-memory cache of active database
@@ -343,17 +346,23 @@ def _add_dataset(enable_load, enable_filesystem, name=None):
         if not database:
             return None, 'Database file is required.'
 
-        # Use .get() to avoid a KeyError if the config isn't set.
-        # In a server environment, default to a temporary directory.
-        upload_dir = app.config.get('DB_UPLOAD_DIR')
-        if upload_dir:
-            dirname = app.config['DB_UPLOAD_DIR']
-            os.makedirs(dirname, exist_ok=True)
+        if datastore and datastore.cloud_storage:
+            filename = secure_filename(database.filename) or 'database.db'
+            path = datastore.cloud_storage.upload_file(database.stream, filename)
         else:
-            dirname = tempfile.mkdtemp(prefix='sqlite-web')
-        filename = secure_filename(database.filename) or 'database.db'
-        path = os.path.join(dirname, filename)
-        database.save(path)
+            # Fallback to temp directory if GCS is not available.
+            app.logger.warning('GCS not configured. Uploaded database will be stored '
+                               'in a temporary, non-persistent directory.')
+            upload_dir = app.config.get('DB_UPLOAD_DIR')
+            if upload_dir:
+                dirname = app.config['DB_UPLOAD_DIR']
+                os.makedirs(dirname, exist_ok=True)
+            else:
+                dirname = tempfile.mkdtemp(prefix='sqlite-web')
+            filename = secure_filename(database.filename) or 'database.db'
+            path = os.path.join(dirname, filename)
+            database.save(path)
+
     elif mode == 'filesystem':
         if not enable_filesystem:
             return None, 'Loading databases from the filesystem is not allowed.'
@@ -1475,6 +1484,17 @@ def initialize_dataset(filename):
     dataset_kw = {}
     if peewee_version >= (3, 14, 9):
         dataset_kw['include_views'] = True
+
+    if filename.startswith('gs://'):
+        if not (datastore and datastore.cloud_storage):
+            die("Google Cloud Storage library not found, but GCS path specified.")
+
+        # Download from GCS to a temporary file
+        fd, local_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+
+        datastore.cloud_storage.download_file(filename, local_path)
+        filename = local_path
 
     if dataset_config['read_only']:
         if peewee_version < (3, 5, 1):

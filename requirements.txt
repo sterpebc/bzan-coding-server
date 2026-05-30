@@ -1,2 +1,6 @@
 flask
 google-cloud-firestore
+google-cloud-storage
+peewee
+pygments
+markupsafe

@@ -1,3 +1,10 @@
+# Secrets
+.env
+.secrets/
+.env.*
+.env.*.local
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.pyc
@@ -24,3 +31,11 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 .tox/
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# VS Code
+.vscode/

@@ -13,10 +13,22 @@
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-azuretools.vscode-docker"
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-docker",
+        "googlecloudtools.cloudcode"
       ]
     }
   },
-  "postCreateCommand": "python -m pip install --no-cache-dir -r requirements.txt",
-  "remoteUser": "root"
+  "mounts": [
+    // Mount the gcloud config directory from your host machine to the container.
+    // This syncs your logged-in account and settings (project, region, etc.).
+    // Note: This works for Linux/macOS. For Windows, the source path is typically
+    // ${localEnv:APPDATA}/gcloud
+    "source=${localEnv:HOME}/.config/gcloud,target=/root/.config/gcloud,type=bind,consistency=cached"
+  ],
+  // By mounting the gcloud config, Application Default Credentials (ADC) will be
+  // available automatically. The GOOGLE_APPLICATION_CREDENTIALS variable is no longer needed.
+  "postCreateCommand": {
+    "pip-install": "pip install --no-cache-dir -r requirements.txt"
+  }
 }

@@ -8,8 +8,45 @@ import os
 
 try:
     from google.cloud import firestore
+    from google.cloud import storage
 except ImportError:
     firestore = None
+    storage = None
+
+
+class CloudStorage:
+    """A manager for Google Cloud Storage operations."""
+
+    def __init__(self):
+        if not storage:
+            raise ImportError(
+                "The 'google-cloud-storage' library is required to use GCS."
+            )
+        # Initialize the client.
+        # The client will automatically use Application Default Credentials (ADC)
+        # to authenticate. ADC can be provided via a service account file
+        # (GOOGLE_APPLICATION_CREDENTIALS) or gcloud user credentials.
+        self.client = storage.Client()
+        self.bucket_name = os.environ.get("GCS_BUCKET")
+
+    def upload_file(self, file_stream, filename):
+        """Uploads a file to the GCS bucket and returns the GCS URI."""
+        if not self.bucket_name:
+            raise ValueError("GCS_BUCKET environment variable not set.")
+
+        bucket = self.client.bucket(self.bucket_name)
+        blob = bucket.blob(filename)
+
+        blob.upload_from_file(
+            file_stream,
+            content_type='application/octet-stream'
+        )
+        return f"gs://{self.bucket_name}/{filename}"
+
+    def download_file(self, gcs_path, local_path):
+        """Downloads a file from a GCS path to a local path."""
+        blob = storage.Blob.from_string(gcs_path, client=self.client)
+        blob.download_to_filename(local_path)
 
 
 class FirestoreDatastore:
@@ -23,6 +60,9 @@ class FirestoreDatastore:
             )
 
         # The project ID will be inferred from the environment by the client library.
+        # The client will automatically use Application Default Credentials (ADC)
+        # to authenticate. ADC can be provided via a service account file
+        # (GOOGLE_APPLICATION_CREDENTIALS) or gcloud user credentials.
         self.db = firestore.Client()
         # Use a specific collection for this app's state.
         db_collection_name = os.environ.get("FIRESTORE_DB_COLLECTION", "sqlite-web-databases")
@@ -60,3 +100,4 @@ class FirestoreDatastore:
 
 # Singleton instance to be used by the application.
 datastore = FirestoreDatastore() if firestore else None
+cloud_storage = CloudStorage() if storage else None
