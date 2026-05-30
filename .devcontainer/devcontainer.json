@@ -19,6 +19,11 @@
       ]
     }
   },
+  // Set the GOOGLE_CLOUD_PROJECT environment variable to provide a quota project.
+  // The Google Cloud client libraries will use this project for API billing and quotas.
+  "containerEnv": {
+    "GOOGLE_CLOUD_PROJECT": "bzan-coding-server"
+  },
   "mounts": [
     // Mount the gcloud config directory from your host machine to the container.
     // This syncs your logged-in account and settings (project, region, etc.).

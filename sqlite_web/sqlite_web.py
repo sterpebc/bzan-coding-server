@@ -21,6 +21,7 @@ from io import StringIO
 from io import TextIOWrapper
 from werkzeug.routing import BaseConverter
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
 
 try:
     import datastore
@@ -269,6 +270,19 @@ def get_dataset():
         return None  # No datasets loaded.
     return g.dataset
 
+def admin_required(fn):
+    """
+    Decorator that redirects anonymous users to the login page.
+    """
+    @wraps(fn)
+    def _decorated_view(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('You must be logged in to access this page.', 'danger')
+            # Store the path they were trying to access.
+            session['next_url'] = request.url
+            return redirect(url_for('login'))
+        return fn(*args, **kwargs)
+    return _decorated_view
 #
 # Flask views.
 #
@@ -282,19 +296,37 @@ def index():
 
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
+    # If there's no datastore, we can't authenticate users.
+    if not datastore or not datastore.datastore:
+        flash('User authentication is not configured.', 'danger')
+        return redirect(url_for('index'))
+
     if request.method == 'POST':
-        if request.form.get('password') == app.config['PASSWORD']:
-            session['authorized'] = True
-            return redirect(session.get('next_url') or url_for('index'))
-        flash('The password you entered is incorrect.', 'danger')
-        app.logger.debug('Received incorrect password attempt from %s' %
-                         request.remote_addr)
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if not username or not password:
+            flash('Username and password are required.', 'danger')
+            return render_template('login.html')
+
+        user_data = datastore.datastore.get_user(username)
+
+        if user_data and check_password_hash(user_data.get('password_hash'), password):
+            # Login successful. Store user identifier in the session.
+            session['user_id'] = username
+            flash('Login successful.', 'success')
+            return redirect(session.pop('next_url', url_for('index')))
+        else:
+            flash('Invalid username or password.', 'danger')
+            app.logger.debug('Failed login attempt for user "%s" from %s',
+                             username, request.remote_addr)
     return render_template('login.html')
 
 @app.route('/logout/', methods=['GET'])
 def logout():
-    session.pop('authorized', None)
-    return redirect(url_for('login'))
+    session.pop('user_id', None)
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/select-dataset/', methods=['GET'])
 def select_dataset():
@@ -306,6 +338,7 @@ def select_dataset():
     return redirect(url_for('index'))
 
 @app.route('/load/', methods=['GET', 'POST'])
+@admin_required
 def load():
     enable_load = app.config.get('ENABLE_LOAD')
     enable_filesystem = app.config.get('ENABLE_FILESYSTEM')
@@ -400,6 +433,7 @@ def _add_dataset(enable_load, enable_filesystem, name=None):
     return dataset, None
 
 @app.route('/unload/', methods=['GET', 'POST'])
+@admin_required
 def unload():
     enable_load = app.config.get('ENABLE_LOAD')
     enable_filesystem = app.config.get('ENABLE_FILESYSTEM')
@@ -574,6 +608,7 @@ def require_table(fn):
     return inner
 
 @app.route('/create-table/', methods=['POST'])
+@admin_required
 def table_create():
     table = (request.form.get('table_name') or '').strip()
     if not table:
@@ -613,6 +648,7 @@ def get_request_data():
     return request.args
 
 @app.route('/<table>/add-column/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def add_column(table):
     dataset = get_dataset()
@@ -665,6 +701,7 @@ def add_column(table):
         table_sql=dataset.get_table_sql(table))
 
 @app.route('/<table>/drop-column/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def drop_column(table):
     dataset = get_dataset()
@@ -696,6 +733,7 @@ def drop_column(table):
         table=table)
 
 @app.route('/<table>/rename-column/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def rename_column(table):
     dataset = get_dataset()
@@ -732,6 +770,7 @@ def rename_column(table):
         table=table)
 
 @app.route('/<table>/add-index/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def add_index(table):
     dataset = get_dataset()
@@ -766,6 +805,7 @@ def add_index(table):
         unique=unique)
 
 @app.route('/<table>/drop-index/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def drop_index(table):
     dataset = get_dataset()
@@ -795,6 +835,7 @@ def drop_index(table):
         table=table)
 
 @app.route('/<table>/drop-trigger/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def drop_trigger(table):
     dataset = get_dataset()
@@ -939,6 +980,7 @@ def minimal_validate_field(field, value):
     return value, None
 
 @app.route('/<table>/insert/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def table_insert(table):
     dataset = get_dataset()
@@ -1021,6 +1063,7 @@ def redirect_to_previous(table):
     return redirect(url_for('table_content', table=table, **kw))
 
 @app.route('/<table>/update/<b64:pk>/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def table_update(table, pk):
     dataset = get_dataset()
@@ -1108,6 +1151,7 @@ def table_update(table, pk):
         table_pk=model._meta.primary_key)
 
 @app.route('/<table>/delete/<b64:pk>/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def table_delete(table, pk):
     dataset = get_dataset()
@@ -1187,6 +1231,7 @@ def export(query, export_format, table=None):
     return response
 
 @app.route('/<table>/export/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def table_export(table):
     dataset = get_dataset()
@@ -1214,6 +1259,7 @@ def table_export(table):
         table=table)
 
 @app.route('/<table>/import/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def table_import(table):
     dataset = get_dataset()
@@ -1276,6 +1322,7 @@ def table_import(table):
         table=table)
 
 @app.route('/<table>/drop/', methods=['GET', 'POST'])
+@admin_required
 @require_table
 def drop_table(table):
     dataset = get_dataset()
@@ -1469,17 +1516,6 @@ def open_browser_tab(host, port):
     thread.daemon = True
     thread.start()
 
-def install_auth_handler(password):
-    app.config['PASSWORD'] = password
-
-    @app.before_request
-    def check_password():
-        if not session.get('authorized') and request.path != '/login/' and \
-           not request.path.startswith(('/static/', '/favicon')):
-            flash('You must log-in to view the database browser.', 'danger')
-            session['next_url'] = request.base_url
-            return redirect(url_for('login'))
-
 def initialize_dataset(filename):
     dataset_kw = {}
     if peewee_version >= (3, 14, 9):
@@ -1548,7 +1584,6 @@ def initialize_app(filenames=None, default_config=None):
 
     # Extract values needed for dataset initialization.
     read_only = app.config.get('READ_ONLY', False)
-    password = app.config.get('PASSWORD')
     url_prefix = app.config.get('URL_PREFIX')
     extensions = app.config.get('EXTENSIONS')
     foreign_keys = app.config.get('FOREIGN_KEYS')
@@ -1568,9 +1603,6 @@ def initialize_app(filenames=None, default_config=None):
         extensions=extensions,
         foreign_keys=foreign_keys,
         startup_hook=startup_hook)
-
-    if password:
-        install_auth_handler(password)
 
     if url_prefix:
         app.logger.warning("url_prefix is set but will be ignored when sqlite-web is embedded.")

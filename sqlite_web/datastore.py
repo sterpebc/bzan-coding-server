@@ -72,6 +72,10 @@ class FirestoreDatastore:
         self.config_collection = self.db.collection(config_collection_name)
         self.config_doc_ref = self.config_collection.document("settings")
 
+        # Add user collection for authentication
+        user_collection_name = os.environ.get("FIRESTORE_USER_COLLECTION", "sqlite-web-users")
+        self.user_collection = self.db.collection(user_collection_name)
+
     def get_all_datasets(self):
         """Retrieves all dataset configurations from Firestore."""
         docs = self.db_collection.stream()
@@ -96,6 +100,14 @@ class FirestoreDatastore:
     def save_config(self, config_dict):
         """Saves the application configuration to Firestore."""
         self.config_doc_ref.set(config_dict)
+
+    def get_user(self, username):
+        """Retrieves a user document from Firestore."""
+        doc_ref = self.user_collection.document(username)
+        doc = doc_ref.get()
+        if doc.exists:
+            return doc.to_dict()
+        return None
 
 
 # Singleton instance to be used by the application.
