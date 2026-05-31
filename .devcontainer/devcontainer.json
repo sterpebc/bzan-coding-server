@@ -35,7 +35,9 @@
   "containerEnv": {
     "GOOGLE_CLOUD_PROJECT": "bzan-coding-server",
     // This tells our entrypoint.sh to run in development mode.
-    "MODE": "dev"
+    "MODE": "dev",
+    // Prevent the venv's activate script from modifying the shell prompt (PS1).
+    "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
   // Use 'workspaceMount' to ensure your local files are available inside the container
   // for hot-reloading to work. This is separate from the 'mounts' array.
