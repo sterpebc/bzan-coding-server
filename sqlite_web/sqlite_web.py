@@ -20,7 +20,7 @@ from functools import wraps
 from io import StringIO
 from io import TextIOWrapper
 from werkzeug.routing import BaseConverter
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename, redirect
 from werkzeug.security import check_password_hash
 
 try:
@@ -293,6 +293,64 @@ def index():
         flash('No databases are loaded. Please upload a database to begin.', 'info')
         return redirect(url_for('load'))
     return render_template('index.html', sqlite=sqlite3)
+
+@app.route('/users/', methods=['GET', 'POST'])
+@admin_required
+def users():
+    if not datastore or not datastore.datastore:
+        flash('User authentication is not configured.', 'danger')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'add_user':
+            return redirect(url_for('add_user'))
+
+    all_users = datastore.datastore.get_all_users()
+    return render_template('users.html', users=all_users)
+
+@app.route('/users/add/', methods=['GET', 'POST'])
+@admin_required
+def add_user():
+    if not datastore or not datastore.datastore:
+        flash('User authentication is not configured.', 'danger')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if not username or not password:
+            flash('Username and password are required.', 'danger')
+            return render_template('add_user.html')
+
+        if datastore.datastore.get_user(username):
+            flash('User already exists.', 'danger')
+            return render_template('add_user.html', username=username)
+
+        from werkzeug.security import generate_password_hash
+        password_hash = generate_password_hash(password)
+        created_by = session.get('user_id')
+        datastore.datastore.add_user(username, password_hash, created_by)
+        flash(f'User "{username}" created successfully.', 'success')
+        return redirect(url_for('users'))
+
+    return render_template('add_user.html')
+
+@app.route('/users/delete/<username>/', methods=['POST'])
+@admin_required
+def delete_user(username):
+    if not datastore or not datastore.datastore:
+        flash('User authentication is not configured.', 'danger')
+        return redirect(url_for('index'))
+
+    if username == session.get('user_id'):
+        flash('You cannot delete yourself.', 'danger')
+        return redirect(url_for('users'))
+
+    datastore.datastore.delete_user(username)
+    flash(f'User "{username}" deleted successfully.', 'success')
+    return redirect(url_for('users'))
 
 @app.route('/login/', methods=['GET', 'POST'])
 def login():

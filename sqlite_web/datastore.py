@@ -65,15 +65,15 @@ class FirestoreDatastore:
         # (GOOGLE_APPLICATION_CREDENTIALS) or gcloud user credentials.
         self.db = firestore.Client()
         # Use a specific collection for this app's state.
-        db_collection_name = os.environ.get("FIRESTORE_DB_COLLECTION", "sqlite-web-databases")
+        db_collection_name = os.environ.get("FIRESTORE_DB_COLLECTION", "coding-server-databases")
         self.db_collection = self.db.collection(db_collection_name)
 
-        config_collection_name = os.environ.get("FIRESTORE_CONFIG_COLLECTION", "sqlite-web-config")
+        config_collection_name = os.environ.get("FIRESTORE_CONFIG_COLLECTION", "coding-server-config")
         self.config_collection = self.db.collection(config_collection_name)
         self.config_doc_ref = self.config_collection.document("settings")
 
         # Add user collection for authentication
-        user_collection_name = os.environ.get("FIRESTORE_USER_COLLECTION", "sqlite-web-users")
+        user_collection_name = os.environ.get("FIRESTORE_USER_COLLECTION", "coding-server-users")
         self.user_collection = self.db.collection(user_collection_name)
 
     def get_all_datasets(self):
@@ -108,6 +108,25 @@ class FirestoreDatastore:
         if doc.exists:
             return doc.to_dict()
         return None
+
+    def get_all_users(self):
+        """Retrieves all users from Firestore."""
+        docs = self.user_collection.stream()
+        return [doc.to_dict() for doc in docs]
+
+    def add_user(self, username, password_hash, created_by):
+        """Adds a new user to Firestore."""
+        from datetime import datetime
+        self.user_collection.document(username).set({
+            "username": username,
+            "password_hash": password_hash,
+            "created_by": created_by,
+            "date_created": datetime.utcnow()
+        })
+
+    def delete_user(self, username):
+        """Deletes a user from Firestore."""
+        self.user_collection.document(username).delete()
 
 
 # Singleton instance to be used by the application.

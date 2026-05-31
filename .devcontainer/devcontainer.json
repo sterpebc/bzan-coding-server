@@ -2,7 +2,10 @@
   "name": "CodingServer Dev Container",
   "build": {
     "dockerfile": "../Dockerfile",
-    "context": ".."
+    "context": "..",
+    // Use the 'prod' stage from the Dockerfile as the base for our dev environment.
+    // This is efficient because we use the same image for dev and prod.
+    "target": "prod"
   },
   "forwardPorts": [8080],
   "features": {
@@ -16,14 +19,30 @@
         "ms-toolsai.jupyter",
         "ms-azuretools.vscode-docker",
         "googlecloudtools.cloudcode"
-      ]
+      ],
+      "settings": {
+        // This prevents the Python extension from modifying shell startup scripts,
+        // giving you manual control over environment activation.
+        "python.terminal.activateEnvironment": false,
+        // Set the Python interpreter path to the one in our container-specific venv.
+        // VS Code will automatically use this for debugging, linting, etc.
+        "python.defaultInterpreterPath": "/app/.venv-devcontainer/bin/python"
+      }
     }
   },
   // Set the GOOGLE_CLOUD_PROJECT environment variable to provide a quota project.
   // The Google Cloud client libraries will use this project for API billing and quotas.
   "containerEnv": {
-    "GOOGLE_CLOUD_PROJECT": "bzan-coding-server"
+    "GOOGLE_CLOUD_PROJECT": "bzan-coding-server",
+    // This tells our entrypoint.sh to run in development mode.
+    "MODE": "dev"
   },
+  // Use 'workspaceMount' to ensure your local files are available inside the container
+  // for hot-reloading to work. This is separate from the 'mounts' array.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
+  // When using 'workspaceMount', 'workspaceFolder' is required to tell VS Code
+  // where to open the project inside the container.
+  "workspaceFolder": "/app",
   "mounts": [
     // Mount the gcloud config directory from your host machine to the container.
     // This syncs your logged-in account and settings (project, region, etc.).
@@ -34,6 +53,9 @@
   // By mounting the gcloud config, Application Default Credentials (ADC) will be
   // available automatically. The GOOGLE_APPLICATION_CREDENTIALS variable is no longer needed.
   "postCreateCommand": {
-    "pip-install": "pip install --no-cache-dir -r requirements.txt"
+    // Create a venv and install dependencies. We chain the commands with '&&'
+    // to ensure they run sequentially, preventing a race condition where pip
+    // might run before the venv is fully created.
+    "install-deps": "python3 -m venv /app/.venv-devcontainer && /app/.venv-devcontainer/bin/pip install --no-cache-dir -r requirements.txt"
   }
 }
