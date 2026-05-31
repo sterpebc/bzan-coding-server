@@ -1,5 +1,0 @@
-{
-  // Instructs VS Code to use the Python interpreter in your virtual environment.
-  //"python.defaultInterpreterPath": "/app/.venv/bin/python",
-  "python.terminal.activateEnvironment": true
-}
