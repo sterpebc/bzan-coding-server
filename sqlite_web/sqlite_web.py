@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import webbrowser
+from datetime import timedelta
 import datetime
 import math
 from collections import namedtuple, OrderedDict
@@ -371,6 +372,8 @@ def login():
 
         if user_data and check_password_hash(user_data.get('password_hash'), password):
             # Login successful. Store user identifier in the session.
+            # Make the session permanent so it will expire.
+            session.permanent = True
             session['user_id'] = username
             flash('Login successful.', 'success')
             return redirect(session.pop('next_url', url_for('index')))
@@ -1639,6 +1642,9 @@ def initialize_app(filenames=None, default_config=None):
 
     # Apply the loaded/default configuration to the app.
     app.config.update(config)
+
+    # Set a default session lifetime (e.g., 8 hours)
+    app.config.setdefault('PERMANENT_SESSION_LIFETIME', timedelta(hours=8))
 
     # Extract values needed for dataset initialization.
     read_only = app.config.get('READ_ONLY', False)

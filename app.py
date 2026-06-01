@@ -15,7 +15,7 @@ main_app = Flask(__name__)
 @main_app.route('/')
 def hello():
     """Return a friendly HTTP greeting."""
-    message = "It's running!"
+    message = "The application is running successfully!"
     service = os.environ.get('K_SERVICE', 'Unknown service')
     revision = os.environ.get('K_REVISION', 'Unknown revision')
     return render_template('index.html',

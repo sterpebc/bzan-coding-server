@@ -24,9 +24,11 @@
         // This prevents the Python extension from modifying shell startup scripts,
         // giving you manual control over environment activation.
         "python.terminal.activateEnvironment": false,
-        // Set the Python interpreter path to the one in our container-specific venv.
-        // VS Code will automatically use this for debugging, linting, etc.
-        "python.defaultInterpreterPath": "/app/.venv-devcontainer/bin/python"
+        // Set the Python interpreter path for the container-specific venv.
+        "python.defaultInterpreterPath": "/app/.venv-devcontainer/bin/python",
+        // Use inline diff view to enable Gemini's interactive diff features.
+        // This allows for accepting/rejecting individual code changes.
+        "diffEditor.renderSideBySide": false
       }
     }
   },
