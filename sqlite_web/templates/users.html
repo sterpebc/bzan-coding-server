@@ -45,6 +45,9 @@
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
           {% endif %}
+          {% if user.username == session.user_id %}
+          <a href="{{ url_for('change_password') }}" class="btn btn-secondary btn-sm">Change Password</a>
+          {% endif %}
         </td>
       </tr>
       {% else %}

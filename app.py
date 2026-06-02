@@ -67,6 +67,8 @@ class WsgiProxyApp(Flask):
 
 # The `flask run` command will now target this `proxy_app`
 proxy_app = WsgiProxyApp(application)
+proxy_app.config["TEMPLATES_AUTO_RELOAD"] = True
+
 
 if __name__ == '__main__':
     # Note: We run the 'application' object now, not 'main_app'.

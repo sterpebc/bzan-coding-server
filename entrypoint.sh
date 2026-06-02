@@ -14,7 +14,7 @@ fi
 if [ "$MODE" = "dev" ]; then
     # Development mode: Use the Flask development server for hot-reloading.
     echo "Running in development mode (MODE=dev)..."
-    exec python app.py
+    exec flask --app app --debug run --host 0.0.0.0 --port 8080
 else
     # Production mode (default): Use Gunicorn for a robust production server.
     exec gunicorn --bind 0.0.0.0:8080 "app:application"

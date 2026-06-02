@@ -306,6 +306,8 @@ def users():
         action = request.form.get('action')
         if action == 'add_user':
             return redirect(url_for('add_user'))
+        elif action == 'change_password':
+            return redirect(url_for('change_password'))
 
     all_users = datastore.datastore.get_all_users()
     return render_template('users.html', users=all_users)
@@ -352,6 +354,46 @@ def delete_user(username):
     datastore.datastore.delete_user(username)
     flash(f'User "{username}" deleted successfully.', 'success')
     return redirect(url_for('users'))
+
+@app.route('/change-password/', methods=['GET', 'POST'])
+@admin_required
+def change_password():
+    if not datastore or not datastore.datastore:
+        flash('User authentication is not configured.', 'danger')
+        return redirect(url_for('index'))
+
+    username = session.get('user_id')
+    if not username:
+        # This case should not be hit due to @admin_required, but it's good practice.
+        flash('Could not identify current user.', 'danger')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not all([current_password, new_password, confirm_password]):
+            flash('All password fields are required.', 'danger')
+            return render_template('change_password.html')
+
+        user_data = datastore.datastore.get_user(username)
+
+        if not user_data or not check_password_hash(user_data.get('password_hash'), current_password):
+            flash('Your current password is not correct.', 'danger')
+            return render_template('change_password.html')
+
+        if new_password != confirm_password:
+            flash('The new passwords do not match.', 'danger')
+            return render_template('change_password.html')
+
+        from werkzeug.security import generate_password_hash
+        new_password_hash = generate_password_hash(new_password)
+        datastore.datastore.update_user_password(username, new_password_hash)
+        flash('Your password has been changed successfully.', 'success')
+        return redirect(url_for('users'))
+
+    return render_template('change_password.html')
 
 @app.route('/login/', methods=['GET', 'POST'])
 def login():

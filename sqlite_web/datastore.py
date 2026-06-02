@@ -124,6 +124,13 @@ class FirestoreDatastore:
             "date_created": datetime.utcnow()
         })
 
+    def update_user_password(self, username, new_password_hash):
+        """Updates an existing user's password hash in Firestore."""
+        from datetime import datetime
+        self.user_collection.document(username).update({
+            "password_hash": new_password_hash
+        })
+
     def delete_user(self, username):
         """Deletes a user from Firestore."""
         self.user_collection.document(username).delete()
