@@ -4,3 +4,4 @@ google-cloud-storage
 peewee
 pygments
 markupsafe
+gunicorn==20.1.0

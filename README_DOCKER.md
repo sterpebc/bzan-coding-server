@@ -44,7 +44,10 @@ Cloud Run deployment
 ```bash
 docker build --target prod -t gcr.io/PROJECT-ID/codingserver:prod .
 docker push gcr.io/PROJECT-ID/codingserver:prod
-gcloud run deploy codingserver --image gcr.io/PROJECT-ID/codingserver:prod --region YOUR_REGION --platform managed
+gcloud run deploy codingserver \
+  --image gcr.io/PROJECT-ID/codingserver:prod \
+  --region YOUR_REGION --platform managed \
+  --env-vars-file env.yaml
 ```
 
 Notes

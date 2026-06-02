@@ -40,3 +40,6 @@ env/
 
 # VS Code
 .vscode/
+
+# SQLite database file
+*.db

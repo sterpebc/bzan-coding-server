@@ -14,18 +14,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get install -y --no-install-recommends google-cloud-sdk && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy and install dependencies
+# Copy dependency definition first to leverage Docker layer caching
 COPY requirements.txt ./
 # Install all Python dependencies in a single, consolidated RUN command
 RUN pip install --no-cache-dir "setuptools<81" -r requirements.txt
 
 # Copy application code and helper scripts
 COPY . .
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV PYTHONUNBUFFERED=1
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Development image: convenient defaults for local iteration
 FROM base AS dev
@@ -34,7 +33,3 @@ ENV MODE=dev
 # Production image: optimized command for Cloud Run
 FROM base AS prod
 ENV MODE=prod
-EXPOSE 8080
-
-# Default to production gunicorn server if nothing else provided
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--bind", "127.0.0.1:8080", "app:application"]
