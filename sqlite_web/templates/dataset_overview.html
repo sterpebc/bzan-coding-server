@@ -1,0 +1,25 @@
+{% extends "base_tables.html" %}
+
+{% block title %}Dataset Overview: {{ dataset_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-12">
+      <h1>Dataset: <strong>{{ dataset_name }}</strong></h1>
+      <p>This page provides an overview of the tables and views within the <strong>{{ dataset_name }}</strong> dataset.</p>
+
+      <h3 class="mt-4">Tables</h3>
+      {% if dataset.tables %}
+        <ul class="list-group">
+          {% for table in dataset.tables|sort %}
+            <li class="list-group-item"><a href="{{ url_for('dataset_dispatcher', dataset_name=dataset_name, table=table) }}">{{ table }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>This dataset contains no tables.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

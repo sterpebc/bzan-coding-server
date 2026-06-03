@@ -9,31 +9,31 @@
 {% block content %}
   <ul class="nav nav-tabs">
     <li class="nav-item">
-      <a class="nav-link{% block structure_tab_class %}{% endblock %}" href="{{ url_for('table_structure', table=table) }}">Structure</a>
+      <a class="nav-link{% block structure_tab_class %}{% endblock %}" href="{{ url_for('dataset_dispatcher', dataset_name=dataset_name, table=table) }}">Structure</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link{% block content_tab_class %}{% endblock %}" href="{{ url_for('table_content', table=table) }}">Content</a>
+      <a class="nav-link{% block content_tab_class %}{% endblock %}" href="{{ url_for('table_content', dataset_name=dataset_name, table=table) }}">Content</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link{% block query_tab_class %}{% endblock %}" href="{{ url_for('table_query', table=table) }}">Query</a>
+      <a class="nav-link{% block query_tab_class %}{% endblock %}" href="{{ url_for('table_query', dataset_name=dataset_name, table=table) }}">Query</a>
     </li>
     {% if not dataset.is_readonly and (not is_view or 'insert' in view_ops) %}
     <li class="nav-item">
-      <a class="nav-link{% block insert_tab_class %}{% endblock %}" href="{{ url_for('table_insert', table=table) }}">Insert</a>
+      <a class="nav-link{% block insert_tab_class %}{% endblock %}" href="{{ url_for('table_insert', dataset_name=dataset_name, table=table) }}">Insert</a>
     </li>
     {% endif %}
     {% if not dataset.is_readonly %}
     <li class="nav-item ml-auto">
-      <a class="nav-link{% block drop_tab_class %}{% endblock %}" href="{{ url_for('drop_table', table=table) }}">Drop</a>
+      <a class="nav-link{% block drop_tab_class %}{% endblock %}" href="{{ url_for('drop_table', dataset_name=dataset_name, table=table) }}">Drop</a>
     </li>
       {% if not is_view or 'insert' in view_ops %}
     <li class="nav-item">
-      <a class="nav-link{% block import_tab_class %}{% endblock %}" href="{{ url_for('table_import', table=table) }}">Import</a>
+      <a class="nav-link{% block import_tab_class %}{% endblock %}" href="{{ url_for('table_import', dataset_name=dataset_name, table=table) }}">Import</a>
     </li>
       {% endif %}
     {% endif %}
     <li class="nav-item">
-      <a class="nav-link{% block export_tab_class %}{% endblock %}" href="{{ url_for('table_export', table=table) }}">Export</a>
+      <a class="nav-link{% block export_tab_class %}{% endblock %}" href="{{ url_for('table_export', dataset_name=dataset_name, table=table) }}">Export</a>
     </li>
     {% block inner_nav %}{% endblock %}
   </ul>

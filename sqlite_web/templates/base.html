@@ -45,29 +45,29 @@
               </a>
               <div class="dropdown-menu" aria-labelledby="datasetDropdown">
                 {% for name in datasets %}
-                  <a class="dropdown-item" href="{{ url_for('select_dataset') }}?name={{ name }}">{{ name }}</a>
+                  <a class="dropdown-item" href="{{ url_for('dataset_dispatcher', dataset_name=name) }}">{{ name }}</a>
                 {% endfor %}
                 {% if enable_load or enable_filesystem %}
-                  <a class="dropdown-item" href="{{ url_for('load') }}">Add Database...</a>
+                  <a class="dropdown-item" href="{{ url_for('load', dataset_name=dataset_name) }}">Add Database...</a>
                 {% endif %}
               </div>
             </li>
           {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('index') }}">{{ dataset.basename }}</a>
+              <a class="nav-link" href="{{ url_for('dataset_dispatcher', dataset_name=dataset_name) }}">{{ dataset.basename }}</a>
             </li>
           {% endif %}
         </ul>
         <span class="navbar-text mr-auto">{% block content_title %}{% endblock %}</span>
         {% if dataset.is_readonly %}
-          <a class="btn btn-sm btn-secondary" href="{{ url_for('generic_query') }}">Query</a>
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('generic_query', dataset_name=dataset_name) }}">Query</a>
         {% else %}
-          <form action="{{ url_for('table_create') }}" class="form-inline" method="post">
+          <form action="{{ url_for('table_create', dataset_name=dataset_name) }}" class="form-inline" method="post">
             <input name="redirect" type="hidden" value="{{ request.full_path }}" />{# full-path begins with "/" and includes querystring #}
             <input class="form-control form-control-sm" name="table_name" placeholder="new_table_name" />
             <button class="btn btn-primary btn-sm" type="submit">Create</button>
             &nbsp;
-            <a class="btn btn-sm btn-secondary" href="{{ url_for('generic_query') }}">Query</a>
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('generic_query', dataset_name=dataset_name) }}">Query</a>
           </form>
         {% endif %}
         {% if datasets|length() > 1 and (enable_load or enable_filesystem) %}

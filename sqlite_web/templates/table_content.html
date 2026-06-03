@@ -9,13 +9,13 @@
 
 {% block inner_content %}
   {# add filters #}
-  {% if allow_bulk %}
-    <form action="." autocomplete="off" method="post">
+  <form action="{{ url_for('table_content', dataset_name=dataset_name, table=table) }}" autocomplete="off" method="post">
+    {% if allow_bulk %}
       <div class="float-right">
         <button class="btn btn-sm btn-danger bulk-action" disabled name="action" type="submit" value="bulk-delete">Bulk Delete</button>
       </div>
-  {% endif %}
-  <table class="table table-striped small cell-content">
+    {% endif %}
+    <table class="table table-striped small cell-content">
     <thead>
       <tr>
         {% if allow_bulk %}
@@ -23,7 +23,7 @@
         {% endif %}
         {% for column in columns %}
           <th>
-            <a href="./?ordering={% if ordering == column %}-{% endif %}{{ column }}">{{ column }}</a>
+            <a href="{{ url_for('table_content', dataset_name=dataset_name, table=table, page=page, ordering=column if ordering != column else '-' + column) }}">{{ column }}</a>
           </th>
         {% endfor %}
         {% if allow_edit %}<th></th>{% endif %}
@@ -50,32 +50,35 @@
           {% endfor %}
           {% if allow_edit %}
             <td>
-              <a class="small" href="{{ url_for('table_update', table=table, pk=pk) }}">Edit</a>
-              <a class="small" href="{{ url_for('table_delete', table=table, pk=pk) }}">Delete</a>
+              <a class="small" href="{{ url_for('table_update', dataset_name=dataset_name, table=table, pk=pk) }}">Edit</a>
+              <a class="small" href="{{ url_for('table_delete', dataset_name=dataset_name, table=table, pk=pk) }}">Delete</a>
             </td>
           {% endif %}
         </tr>
       {% endfor %}
     </tbody>
   </table>
-  {% if allow_bulk %}</form>{% endif %}
+  </form>
   <nav>
-    <ul class="pagination">
-      <li class="{% if not previous_page %}disabled {% endif %}page-item">
-        <a class="page-link" href="{{ url_for('table_content', table=table, page=1, ordering=ordering) }}">&laquo;</a>
-      </li>
-      <li class="{% if not previous_page %}disabled {% endif %}page-item">
-        <a class="page-link" href="{{ url_for('table_content', table=table, page=previous_page, ordering=ordering) }}">&lsaquo;</a>
-      </li>
-      <li class="page-item disabled">
-        <span class="page-link">Page {{ page }} / {{ total_pages }}</span>
-      </li>
-      <li class="{% if not next_page %}disabled {% endif %}page-item">
-        <a class="page-link" href="{{ url_for('table_content', table=table, page=next_page, ordering=ordering) }}">&rsaquo;</a>
-      </li>
-      <li class="{% if not next_page %}disabled {% endif %}page-item">
-        <a class="page-link" href="{{ url_for('table_content', table=table, page=total_pages, ordering=ordering) }}">&raquo;</a>
-      </li>
-    </ul>
+    <form action="{{ url_for('table_content', dataset_name=dataset_name, table=table) }}" method="get">
+      <input name="ordering" type="hidden" value="{% if ordering %}{{ ordering }}{% endif %}" />
+      <ul class="pagination">
+        <li class="{% if not previous_page %}disabled {% endif %}page-item">
+          <button class="page-link" name="page" type="submit" value="1">&laquo;</button>
+        </li>
+        <li class="{% if not previous_page %}disabled {% endif %}page-item">
+          <button class="page-link" name="page" type="submit" value="{{ previous_page }}">&lsaquo;</button>
+        </li>
+        <li class="page-item disabled">
+          <span class="page-link">Page {{ page }} / {{ total_pages }}</span>
+        </li>
+        <li class="{% if not next_page %}disabled {% endif %}page-item">
+          <button class="page-link" name="page" type="submit" value="{{ next_page }}">&rsaquo;</button>
+        </li>
+        <li class="{% if not next_page %}disabled {% endif %}page-item">
+          <button class="page-link" name="page" type="submit" value="{{ total_pages }}">&raquo;</button>
+        </li>
+      </ul>
+    </form>
   </nav>
 {% endblock %}

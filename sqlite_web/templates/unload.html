@@ -9,7 +9,7 @@
   {% endif %}
 
   <h3>Unload a Database</h3>
-  <form action="." method="post" role="form">
+  <form action="{{ url_for('unload') }}" method="post" role="form">
     <div class="form-group">
       <select class="form-control" name="dataset">
         {% for name in datasets %}
@@ -22,4 +22,3 @@
     <a class="btn btn-default" href="{{ url_for('index') }}">Cancel</a>
   </form>
 {% endblock %}
-

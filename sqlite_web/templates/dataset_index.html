@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Select a Dataset{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-12">
+      <h1>Select a Dataset</h1>
+      <p>The following datasets are available. Please choose one to continue.</p>
+      <div class="list-group">
+        {% for name in datasets|sort %}
+          <a href="{{ url_for('dataset_dispatcher', dataset_name=name) }}" class="list-group-item list-group-item-action">{{ name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

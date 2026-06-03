@@ -32,7 +32,7 @@
   <div id="tableInfo">
     {{ table_sql|format_create_table|highlight }}
   </div>
-  <form action="." id="query-form" method="post" role="form">
+  <form action="{{ url_for('table_query', dataset_name=dataset_name, table=table) }}" id="query-form" method="post" role="form">
     <input name="ordering" type="hidden" value="" />
     <input name="export_ordering" type="hidden" value="{% if ordering %}{{ ordering }}{% endif %}" />
     <div class="form-group{% if error %} has-error has-feedback{% endif %}">
@@ -76,15 +76,15 @@
       <p>Empty result set.</p>
     {% else %}
       {% if allow_bulk %}
-        <form action="." autocomplete="off" method="post">
-          <textarea name="sql" style="display: none;">{% if sql %}{{ sql }}{% else %}{{ default_sql }}{% endif %}</textarea>
+        <form action="{{ url_for('table_query', dataset_name=dataset_name, table=table) }}" autocomplete="off" method="post">
+          <textarea name="sql" style="display: none;">{{ sql or default_sql }}</textarea>
           <div class="float-right">
-            <a class="btn btn-default" href="{{ url_for('table_query', table=table, sql=sql) }}{% if ordering %}&ordering={{ ordering }}{% endif %}{% if page > 1 %}&page={{ page }}{% endif %}">Permalink</a>
+            <a class="btn btn-default" href="{{ url_for('table_query', dataset_name=dataset_name, table=table, sql=sql, ordering=ordering, page=page if page > 1 else None) }}">Permalink</a>
             <button class="btn btn-danger bulk-action" disabled name="action" type="submit" value="bulk-delete">Bulk Delete</button>
           </div>
       {% else %}
         <div class="float-right">
-          <a class="btn btn-default" href="{{ url_for('table_query', table=table, sql=sql) }}{% if ordering %}&ordering={{ ordering }}{% endif %}{% if page > 1 %}&page={{ page }}{% endif %}">Permalink</a>
+          <a class="btn btn-default" href="{{ url_for('table_query', dataset_name=dataset_name, table=table, sql=sql, ordering=ordering, page=page if page > 1 else None) }}">Permalink</a>
         </div>
       {% endif %}
       <h3>
@@ -98,7 +98,7 @@
             {% endif %}
             {% for col_desc in data_description %}
               <th>
-                <a class="sort-header" href="{{ url_for('table_query', table=table, sql=sql) }}&ordering={% if loop.index == ordering %}-{% endif %}{{ loop.index }}">{{ col_desc[0] }}{% if ordering is not none %}{% if loop.index == ordering %}&#9660;{% elif loop.index == -ordering %}&#9650;{% endif %}{% endif %}</a>
+                <a class="sort-header" href="{{ url_for('table_query', dataset_name=dataset_name, table=table, sql=sql, ordering=loop.index if ordering != loop.index else -loop.index) }}">{{ col_desc[0] }}{% if ordering is not none %}{% if loop.index == ordering %}&#9660;{% elif loop.index == -ordering %}&#9650;{% endif %}{% endif %}</a>
               </th>
             {% endfor %}
             {% if allow_edit %}<th></th>{% endif %}
@@ -117,8 +117,8 @@
               {% endfor %}
               {% if allow_edit %}
                 <td>
-                  <a class="small" href="{{ url_for('table_update', table=table, pk=row[pk_index]) }}">Edit</a>
-                  <a class="small" href="{{ url_for('table_delete', table=table, pk=row[pk_index]) }}">Delete</a>
+                  <a class="small" href="{{ url_for('table_update', dataset_name=dataset_name, table=table, pk=row[pk_index]) }}">Edit</a>
+                  <a class="small" href="{{ url_for('table_delete', dataset_name=dataset_name, table=table, pk=row[pk_index]) }}">Delete</a>
                 </td>
               {% endif %}
             </tr>

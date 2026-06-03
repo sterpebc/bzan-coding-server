@@ -23,7 +23,7 @@
 {% block content_title %}Query{% endblock %}
 
 {% block content %}
-  <form action="." id="query-form" method="post" role="form">
+  <form action="{{ url_for('generic_query', dataset_name=dataset_name) }}" id="query-form" method="post" role="form">
     <input name="ordering" type="hidden" value="" />
     <input name="export_ordering" type="hidden" value="{% if ordering %}{{ ordering }}{% endif %}" />
     <div class="form-group{% if error %} has-error has-feedback{% endif %}">
@@ -66,7 +66,7 @@
     {% if not data %}
       <p>Empty result set.</p>
     {% else %}
-      <a class="float-right" href="{{ url_for('generic_query', sql=sql) }}{% if ordering %}&ordering={{ ordering }}{% endif %}{% if page > 1 %}&page={{ page }}{% endif %}">Permalink</a>
+      <a class="float-right" href="{{ url_for('generic_query', dataset_name=dataset_name, sql=sql, ordering=ordering, page=page if page > 1 else None) }}">Permalink</a>
       <h3>
         Results ({% if total >= 0 %}{% if total_pages > 1 %}{{ page_start }}&ndash;{{ page_end }} of {% endif %}{{ total }}{% else %}unable to determine{% endif %})
       </h3>
@@ -75,7 +75,7 @@
           <tr>
             {% for col_desc in data_description %}
               <th>
-                <a class="sort-header" href="{{ url_for('generic_query', sql=sql) }}&ordering={% if loop.index == ordering %}-{% endif %}{{ loop.index }}">{{ col_desc[0] }}{% if ordering is not none %}{% if loop.index == ordering %}&#9660;{% elif loop.index == -ordering %}&#9650;{% endif %}{% endif %}</a>
+                <a class="sort-header" href="{{ url_for('generic_query', dataset_name=dataset_name, sql=sql, ordering=loop.index if ordering != loop.index else -loop.index) }}">{{ col_desc[0] }}{% if ordering is not none %}{% if loop.index == ordering %}&#9660;{% elif loop.index == -ordering %}&#9650;{% endif %}{% endif %}</a>
               </th>
             {% endfor %}
           </tr>

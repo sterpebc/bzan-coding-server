@@ -13,7 +13,7 @@
 
   {% if enable_load %}
     <h3>Upload a Sqlite Database</h3>
-    <form action="." method="post" role="form" enctype="multipart/form-data">
+    <form action="{{ url_for('load') }}" method="post" role="form" enctype="multipart/form-data">
       <div class="form-group">
         <input class="form-control" name="name" type="text" value="" placeholder="dataset-name" />
         <small class="form-text text-muted">Optional, URL-friendly name for the dataset. If blank, one will be generated from the filename.</small>
@@ -30,7 +30,7 @@
   {% if enable_filesystem %}
     {% if enable_load %}<hr />{% endif %}
     <h3>Load a Sqlite Database from File-System</h3>
-    <form action="." method="post" role="form">
+    <form action="{{ url_for('load') }}" method="post" role="form">
       <div class="form-group">
         <input class="form-control" name="name" type="text" value="" placeholder="dataset-name" />
         <small class="form-text text-muted">Optional, URL-friendly name for the dataset. If blank, one will be generated from the filename.</small>

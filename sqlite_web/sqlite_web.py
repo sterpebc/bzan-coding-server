@@ -284,16 +284,63 @@ def admin_required(fn):
             return redirect(url_for('login'))
         return fn(*args, **kwargs)
     return _decorated_view
+
+def require_dataset(fn):
+    """
+    Decorator to ensure a valid dataset is specified in the URL and loaded
+    into the request context `g`.
+    """
+    @wraps(fn)
+    def inner(dataset_name, *args, **kwargs):
+        if dataset_name not in datasets:
+            abort(404)
+        g.dataset = datasets[dataset_name]
+        session['dataset'] = dataset_name
+        return fn(dataset_name, *args, **kwargs)
+    return inner
+
 #
 # Flask views.
 #
 
+@app.route('/<dataset_name>/')
+@app.route('/<dataset_name>/<table>/')
+@require_dataset
+def dataset_dispatcher(dataset_name, table=None):
+    """
+    Main dispatcher for dataset-prefixed URLs.
+    
+    This view handles URLs like /<dataset_name>/ and /<dataset_name>/<table>/.
+    It validates the dataset, sets it for the current request context, and then
+    either displays a dataset overview or dispatches to a table-specific view.
+    """
+    if table is None:
+        # /<dataset_name>/ -> Show dataset overview.
+        return render_template('dataset_overview.html', dataset_name=dataset_name)
+    else:
+        # /<dataset_name>/<table>/ -> Show table structure.
+        if table not in g.dataset.tables:
+            abort(404)
+
+        ds_table = g.dataset[table]
+        model_class = ds_table.model_class
+        return render_template('table_structure.html', columns=g.dataset.get_columns(table), ds_table=ds_table, foreign_keys=g.dataset.get_foreign_keys(table), indexes=g.dataset.get_indexes(table), model_class=model_class, table=table, table_sql=g.dataset.get_table_sql(table), triggers=g.dataset.get_triggers(table))
+
 @app.route('/')
+@admin_required
 def index():
-    if not get_dataset():
+    # If no datasets are loaded at all, redirect to the upload page.
+    if not datasets:
         flash('No databases are loaded. Please upload a database to begin.', 'info')
         return redirect(url_for('load'))
-    return render_template('index.html', sqlite=sqlite3)
+
+    # If there is only one dataset, redirect to it for convenience.
+    if len(datasets) == 1:
+        dataset_name = list(datasets.keys())[0]
+        return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name))
+
+    # If there are multiple datasets, show a selection page.
+    return render_template('dataset_index.html')
 
 @app.route('/users/', methods=['GET', 'POST'])
 @admin_required
@@ -704,15 +751,16 @@ def generic_query():
 
 def require_table(fn):
     @wraps(fn)
-    def inner(table, *args, **kwargs):
+    def inner(dataset_name, table, *args, **kwargs):
         if table not in get_dataset().tables:
             abort(404)
-        return fn(table, *args, **kwargs)
+        return fn(dataset_name, table, *args, **kwargs)
     return inner
 
-@app.route('/create-table/', methods=['POST'])
+@app.route('/<dataset_name>/create-table/', methods=['POST'])
 @admin_required
-def table_create():
+@require_dataset
+def table_create(dataset_name):
     table = (request.form.get('table_name') or '').strip()
     if not table:
         flash('Table name is required.', 'danger')
@@ -725,35 +773,18 @@ def table_create():
     except Exception as exc:
         flash('Error: %s' % str(exc), 'danger')
         app.logger.exception('Error attempting to create table.')
-    return redirect(url_for('table_import', table=table))
-
-@app.route('/<table>/')
-@require_table
-def table_structure(table):
-    dataset = get_dataset()
-    ds_table = dataset[table]
-    model_class = ds_table.model_class
-
-    return render_template(
-        'table_structure.html',
-        columns=dataset.get_columns(table),
-        ds_table=ds_table,
-        foreign_keys=dataset.get_foreign_keys(table),
-        indexes=dataset.get_indexes(table),
-        model_class=model_class,
-        table=table,
-        table_sql=dataset.get_table_sql(table),
-        triggers=dataset.get_triggers(table))
+    return redirect(url_for('table_import', dataset_name=dataset_name, table=table))
 
 def get_request_data():
     if request.method == 'POST':
         return request.form
     return request.args
 
-@app.route('/<table>/add-column/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/add-column/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def add_column(table):
+@require_dataset
+def add_column(dataset_name, table):
     dataset = get_dataset()
 
     class JsonField(TextField):
@@ -791,7 +822,7 @@ def add_column(table):
             else:
                 flash('Column "%s" was added successfully!' % name, 'success')
                 dataset.update_cache(table)
-                return redirect(url_for('table_structure', table=table))
+                return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name, table=table))
         else:
             flash('Name and column type are required.', 'danger')
 
@@ -803,10 +834,11 @@ def add_column(table):
         table=table,
         table_sql=dataset.get_table_sql(table))
 
-@app.route('/<table>/drop-column/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/drop-column/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def drop_column(table):
+@require_dataset
+def drop_column(dataset_name, table):
     dataset = get_dataset()
     request_data = get_request_data()
     name = request_data.get('name', '')
@@ -824,7 +856,7 @@ def drop_column(table):
             else:
                 flash('Column "%s" was dropped successfully!' % name, 'success')
                 dataset.update_cache(table)
-                return redirect(url_for('table_structure', table=table))
+                return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name, table=table))
         else:
             flash('Name is required.', 'danger')
 
@@ -835,10 +867,11 @@ def drop_column(table):
         name=name,
         table=table)
 
-@app.route('/<table>/rename-column/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/rename-column/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def rename_column(table):
+@require_dataset
+def rename_column(dataset_name, table):
     dataset = get_dataset()
     request_data = get_request_data()
     rename = request_data.get('rename', '')
@@ -859,7 +892,7 @@ def rename_column(table):
             else:
                 flash('Column "%s" was renamed successfully!' % rename, 'success')
                 dataset.update_cache(table)
-                return redirect(url_for('table_structure', table=table))
+                return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name, table=table))
         else:
             flash('Column name is required and cannot conflict with an '
                   'existing column\'s name.', 'danger')
@@ -872,10 +905,11 @@ def rename_column(table):
         rename_to=rename_to,
         table=table)
 
-@app.route('/<table>/add-index/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/add-index/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def add_index(table):
+@require_dataset
+def add_index(dataset_name, table):
     dataset = get_dataset()
     request_data = get_request_data()
     indexed_columns = request_data.getlist('indexed_columns')
@@ -896,7 +930,7 @@ def add_index(table):
                 app.logger.exception('Error attempting to create index.')
             else:
                 flash('Index created successfully.', 'success')
-                return redirect(url_for('table_structure', table=table))
+                return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name, table=table))
         else:
             flash('One or more columns must be selected.', 'danger')
 
@@ -907,10 +941,11 @@ def add_index(table):
         table=table,
         unique=unique)
 
-@app.route('/<table>/drop-index/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/drop-index/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def drop_index(table):
+@require_dataset
+def drop_index(dataset_name, table):
     dataset = get_dataset()
     request_data = get_request_data()
     name = request_data.get('name', '')
@@ -926,7 +961,7 @@ def drop_index(table):
                 app.logger.exception('Error attempting to drop index.')
             else:
                 flash('Index "%s" was dropped successfully!' % name, 'success')
-                return redirect(url_for('table_structure', table=table))
+                return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name, table=table))
         else:
             flash('Index name is required.', 'danger')
 
@@ -937,10 +972,11 @@ def drop_index(table):
         name=name,
         table=table)
 
-@app.route('/<table>/drop-trigger/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/drop-trigger/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def drop_trigger(table):
+@require_dataset
+def drop_trigger(dataset_name, table):
     dataset = get_dataset()
     request_data = get_request_data()
     name = request_data.get('name', '')
@@ -956,7 +992,7 @@ def drop_trigger(table):
                 app.logger.exception('Error attempting to drop trigger.')
             else:
                 flash('Trigger "%s" was dropped successfully!' % name, 'success')
-                return redirect(url_for('table_structure', table=table))
+                return redirect(url_for('dataset_dispatcher', dataset_name=dataset_name, table=table))
         else:
             flash('Trigger name is required.', 'danger')
 
@@ -968,9 +1004,10 @@ def drop_trigger(table):
         table=table)
 
 
-@app.route('/<table>/content/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/content/', methods=['GET', 'POST'])
 @require_table
-def table_content(table):
+@require_dataset
+def table_content(dataset_name, table):
     dataset = get_dataset()
     dataset.update_cache(table)
     ds_table = dataset[table]
@@ -1082,10 +1119,11 @@ def minimal_validate_field(field, value):
 
     return value, None
 
-@app.route('/<table>/insert/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/insert/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def table_insert(table):
+@require_dataset
+def table_insert(dataset_name, table):
     dataset = get_dataset()
     dataset.update_cache(table)
     model = dataset[table].model_class
@@ -1134,6 +1172,7 @@ def table_insert(table):
                 flash('Successfully inserted record (%s).' % n, 'success')
                 return redirect(url_for(
                     'table_content',
+                    'table_content',
                     table=table,
                     page='last'))
         else:
@@ -1153,32 +1192,33 @@ def table_insert(table):
         row=row,
         table=table)
 
-def redirect_to_previous(table):
+def redirect_to_previous(dataset_name, table):
     page_ordering = session.get('%s.last_viewed' % table)
     if not page_ordering:
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
     page, ordering = page_ordering
-    kw = {}
+    kw = {'dataset_name': dataset_name}
     if page and page != 1:
         kw['page'] = page
     if ordering:
         kw['ordering'] = ordering
     return redirect(url_for('table_content', table=table, **kw))
 
-@app.route('/<table>/update/<b64:pk>/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/update/<b64:pk>/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def table_update(table, pk):
+@require_dataset
+def table_update(dataset_name, table, pk):
     dataset = get_dataset()
     dataset.update_cache(table)
     model = dataset[table].model_class
     table_pk = model._meta.primary_key
     if not table_pk:
         flash('Table must have a primary key to perform update.', 'danger')
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
     elif pk == '__uneditable__':
         flash('Could not encode primary key to perform update.', 'danger')
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
 
     expr = decode_pk(model, pk)
     try:
@@ -1186,7 +1226,7 @@ def table_update(table, pk):
     except model.DoesNotExist:
         pk_repr = pk_display(table_pk, pk)
         flash('Could not fetch row with primary-key %s.' % str(pk_repr), 'danger')
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
 
     columns = []
     fields = []
@@ -1235,7 +1275,7 @@ def table_update(table, pk):
                 app.logger.exception('Error attempting to update row from %s.', table)
             else:
                 flash('Successfully updated %s record.' % n, 'success')
-                return redirect_to_previous(table)
+                return redirect_to_previous(dataset_name, table)
         else:
             flash('No data was specified to be updated.', 'warning')
 
@@ -1253,20 +1293,21 @@ def table_update(table, pk):
         table=table,
         table_pk=model._meta.primary_key)
 
-@app.route('/<table>/delete/<b64:pk>/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/delete/<b64:pk>/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def table_delete(table, pk):
+@require_dataset
+def table_delete(dataset_name, table, pk):
     dataset = get_dataset()
     dataset.update_cache(table)
     model = dataset[table].model_class
     table_pk = model._meta.primary_key
     if not table_pk:
         flash('Table must have a primary key to perform delete.', 'danger')
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
     elif pk == '__uneditable__':
         flash('Could not encode primary key to perform delete.', 'danger')
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
 
     expr = decode_pk(model, pk)
     try:
@@ -1274,7 +1315,7 @@ def table_delete(table, pk):
     except model.DoesNotExist:
         pk_repr = pk_display(table_pk, pk)
         flash('Could not fetch row with primary-key %s.' % str(pk_repr), 'danger')
-        return redirect(url_for('table_content', table=table))
+        return redirect(url_for('table_content', dataset_name=dataset_name, table=table))
 
     if request.method == 'POST':
         try:
@@ -1285,7 +1326,7 @@ def table_delete(table, pk):
             app.logger.exception('Error attempting to delete row from %s.', table)
         else:
             flash('Successfully deleted %s record.' % n, 'success')
-            return redirect_to_previous(table)
+            return redirect_to_previous(dataset_name, table)
 
     return render_template(
         'table_delete.html',
@@ -1295,9 +1336,10 @@ def table_delete(table, pk):
         table=table,
         table_pk=table_pk)
 
-@app.route('/<table>/query/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/query/', methods=['GET', 'POST'])
 @require_table
-def table_query(table):
+@require_dataset
+def table_query(dataset_name, table):
     return _query_view('table_query.html', table)
 
 def export(query, export_format, table=None):
@@ -1333,10 +1375,11 @@ def export(query, export_format, table=None):
     response.headers['Pragma'] = 'public'
     return response
 
-@app.route('/<table>/export/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/export/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def table_export(table):
+@require_dataset
+def table_export(dataset_name, table):
     dataset = get_dataset()
     columns = dataset.get_columns(table)
     if request.method == 'POST':
@@ -1361,11 +1404,12 @@ def table_export(table):
         columns=columns,
         table=table)
 
-@app.route('/<table>/import/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/import/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def table_import(table):
-    dataset = get_dataset()
+@require_dataset
+def table_import(dataset_name, table):
+    dataset = g.dataset
     count = None
     request_data = get_request_data()
     strict = bool(request_data.get('strict'))
@@ -1416,7 +1460,7 @@ def table_import(table):
                     'Successfully imported %s objects from %s.' % (
                         count, file_obj.filename),
                     'success')
-                return redirect(url_for('table_content', table=table))
+                return redirect(url_for('table_content', dataset_name=dataset_name, table=table, _anchor=''))
 
     return render_template(
         'table_import.html',
@@ -1424,10 +1468,11 @@ def table_import(table):
         strict=strict,
         table=table)
 
-@app.route('/<table>/drop/', methods=['GET', 'POST'])
+@app.route('/<dataset_name>/<table>/drop/', methods=['GET', 'POST'])
 @admin_required
 @require_table
-def drop_table(table):
+@require_dataset
+def drop_table(dataset_name, table):
     dataset = get_dataset()
     is_view = any(v.name == table for v in dataset.get_all_views())
     label = 'view' if is_view else 'table'
@@ -1556,9 +1601,12 @@ def get_query_images():
 @app.context_processor
 def _general():
     dataset_name = None
-    dataset = get_dataset()
-    if hasattr(g, 'dataset'):
-        dataset_name = g.dataset.basename
+    dataset = get_dataset()  # This ensures g.dataset is populated if needed.
+    if hasattr(g, 'dataset') and g.dataset:
+        # The session holds the logical name of the dataset, which is what we
+        # need for generating correct URLs. g.dataset.basename is the actual
+        # filename, which is not what we want for routing.
+        dataset_name = session.get('dataset')
     return {
         'dataset': dataset,
         'dataset_name': dataset_name,
