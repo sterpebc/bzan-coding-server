@@ -12,6 +12,7 @@
     const queryText = document.getElementById('sql').value;
     const formData = new FormData();
     formData.append('sql', queryText);
+    formData.append('dataset_name', '{{ dataset_name }}');
     // Use sendBeacon to reliably send data on page unload.
     // The URL is hardcoded as it's outside the dataset-specific routing.
     navigator.sendBeacon('/db/save-query/', formData);
@@ -43,7 +44,6 @@
     {% if not data %}
       <p>Empty result set.</p>
     {% else %}
-      <a class="float-right" href="{{ url_for('generic_query', dataset_name=dataset_name, sql=sql, ordering=ordering, page=page if page > 1 else None) }}">Permalink</a>
       <h3>
         Results ({% if total >= 0 %}{% if total_pages > 1 %}{{ page_start }}&ndash;{{ page_end }} of {% endif %}{{ total }}{% else %}unable to determine{% endif %})
       </h3>

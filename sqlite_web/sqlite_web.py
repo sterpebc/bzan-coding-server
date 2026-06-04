@@ -759,14 +759,29 @@ def _query_view(template, table=None):
 
 @app.route('/query/', methods=['GET', 'POST'])
 def generic_query():
+    # Check if a dataset_name is provided in the query string.
+    query_dataset = request.values.get('dataset_name')
+
+    # If a valid dataset is specified in the URL and it's different from
+    # the one in the session, update the session to switch datasets.
+    if query_dataset and query_dataset in datasets and query_dataset != session.get('dataset'):
+        session['dataset'] = query_dataset
+        # Since get_dataset() relies on g, we need to update g as well for this request.
+        g.dataset = datasets[query_dataset]
+
+    # If no dataset is active at all, redirect to the main index.
+    if not get_dataset():
+        flash('Please select a dataset to query.', 'warning')
+        return redirect(url_for('index'))
+
     return _query_view('query.html')
 
 @app.route('/save-query/', methods=['POST'])
 def save_query():
-    dataset_name = session.get('dataset')
+    dataset_name = request.form.get('dataset_name')
     sql = request.form.get('sql', '')
 
-    if not dataset_name:
+    if not dataset_name or dataset_name not in datasets:
         return jsonify(status='error', message='No active dataset.'), 400
 
     if 'queries' not in session:
