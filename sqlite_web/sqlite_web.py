@@ -260,13 +260,12 @@ def get_dataset():
     # This function is now a wrapper around g.dataset. The dataset should
     # be set on `g` by the view functions.
     if not hasattr(g, 'dataset'):
-        # Fallback for routes that don't have a dataset_name in the URL.
-        if datasets:
-            dataset_key = session.get('dataset')
-            if dataset_key is None or dataset_key not in datasets:
-                dataset_key = list(datasets)[0]
-                session['dataset'] = dataset_key
-            g.dataset = datasets[dataset_key]
+        # If a dataset is in the session, load it into the request context `g`.
+        # Do not default to the first available dataset if one is not in the
+        # session, as this can lead to unexpected behavior.
+        dataset_key = session.get('dataset')
+        if dataset_key and dataset_key in datasets:
+            g.dataset = datasets.get(dataset_key)
     if not hasattr(g, 'dataset'):
         return None  # No datasets loaded.
     return g.dataset
@@ -474,7 +473,9 @@ def login():
 
 @app.route('/logout/', methods=['GET'])
 def logout():
-    session.pop('user_id', None)
+    # Clear the entire session to ensure a clean state upon next login.
+    # This removes user_id, dataset selection, and any other session data.
+    session.clear()
     flash('You have been logged out.', 'success')
     return redirect(url_for('index'))
 
@@ -621,8 +622,15 @@ def _query_view(template, table=None):
     data_description = error = row_count = sql = None
     ordering = None
     pk_index = None
+    dataset_name = session.get('dataset')
+    sql = request.values.get('sql') or session.get('queries', {}).get(dataset_name, '')
+    if request.method == 'POST' and 'queries' not in session:
+        session['queries'] = {}
+    if request.method == 'POST':
+        session['queries'][dataset_name] = sql
+        session.modified = True
 
-    sql = qsql = request.values.get('sql') or ''
+    qsql = sql
 
     if 'export_json' in request.values:
         ordering = request.values.get('export_ordering')
@@ -633,6 +641,10 @@ def _query_view(template, table=None):
     else:
         ordering = request.values.get('ordering')
         export_format = None
+
+    # Only execute the query if the user submitted the form (POST),
+    # or is interacting with results (pagination, sorting, export).
+    should_execute = request.method == 'POST' or any(k in request.values for k in ('page', 'ordering', 'export_json', 'export_csv'))
 
     if ordering:
         import math
@@ -674,7 +686,7 @@ def _query_view(template, table=None):
 
     page = page_next = page_prev = page_start = page_end = total_pages = 1
     total = -1  # Number of rows in query result.
-    if qsql:
+    if qsql and should_execute:
         if export_format:
             query = model_class.raw(qsql).dicts()
             return export(query, export_format, table)
@@ -748,6 +760,20 @@ def _query_view(template, table=None):
 @app.route('/query/', methods=['GET', 'POST'])
 def generic_query():
     return _query_view('query.html')
+
+@app.route('/save-query/', methods=['POST'])
+def save_query():
+    dataset_name = session.get('dataset')
+    sql = request.form.get('sql', '')
+
+    if not dataset_name:
+        return jsonify(status='error', message='No active dataset.'), 400
+
+    if 'queries' not in session:
+        session['queries'] = {}
+    session['queries'][dataset_name] = sql
+    session.modified = True
+    return jsonify(status='ok')
 
 def require_table(fn):
     @wraps(fn)

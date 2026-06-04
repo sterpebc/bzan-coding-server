@@ -6,11 +6,16 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-12">
-      <h1>Select a Dataset</h1>
+      <h1>Select a Database</h1>
       <p>The following datasets are available. Please choose one to continue.</p>
       <div class="list-group">
         {% for name in datasets|sort %}
-          <a href="{{ url_for('dataset_dispatcher', dataset_name=name) }}" class="list-group-item list-group-item-action">{{ name }}</a>
+          <a href="{{ url_for('dataset_dispatcher', dataset_name=name) }}" class="list-group-item list-group-item-action{% if name == dataset_name %} active{% endif %}">
+            {{ name }}
+            {% if name == dataset_name %}
+              <span class="float-right">&lt;-- Currently selected</span>
+            {% endif %}
+          </a>
         {% endfor %}
       </div>
     </div>

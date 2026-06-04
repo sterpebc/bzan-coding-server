@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>SQLite Web: {{ dataset.basename }}</title>
+    <title>SQLite Web</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -31,47 +31,45 @@
 
   <body class="{% block body_class %}{% endblock %}">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark primary-nav">
-      <a class="navbar-brand" href="{{ url_for('index') }}">sqlite-web {{ version }}</a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
       {% block content_header %}
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav">
-          {% if datasets|length() > 1 or enable_load or enable_filesystem %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="datasetDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                {{ dataset.basename }}
-              </a>
               <div class="dropdown-menu" aria-labelledby="datasetDropdown">
-                {% for name in datasets %}
-                  <a class="dropdown-item" href="{{ url_for('dataset_dispatcher', dataset_name=name) }}">{{ name }}</a>
-                {% endfor %}
-                {% if enable_load or enable_filesystem %}
-                  <a class="dropdown-item" href="{{ url_for('load', dataset_name=dataset_name) }}">Add Database...</a>
+                {% if session.user_id and datasets|length() > 0 and (enable_load or enable_filesystem) %}
+                  <li class="nav-item nav-link">
+                    <select id="datasetSelector" onchange="if (this.value) window.location.href=this.value">
+                      <option value="">Select a dataset</option>
+                      {% for name in datasets|sort %}
+                        <option value="{{ url_for('dataset_dispatcher', dataset_name=name) }}" {% if name == dataset_name %}selected{% endif %}>{{ name }}</option>
+                      {% endfor %}
+                    </select>
+                  </li>
                 {% endif %}
+                {% for table_name in dataset.tables|sort %}
+                  {% if table_name not in virtual_tables_corollary %}
+                    <li class="nav-item table-link">
+                      <a class="nav-link{% if table and table_name == table %} active{% endif %}" href="{{ url_for('dataset_dispatcher', dataset_name=dataset_name, table=table_name) }}" title="{{ table_name }}">
+                        {{ table_name|truncate(24, True, leeway=2) }}
+                        {% if table_name in virtual_tables %}
+                          <sup>(v)</sup>
+                        {% endif %}
+                      </a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
               </div>
             </li>
-          {% else %}
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('dataset_dispatcher', dataset_name=dataset_name) }}">{{ dataset.basename }}</a>
-            </li>
-          {% endif %}
         </ul>
-        <span class="navbar-text mr-auto">{% block content_title %}{% endblock %}</span>
-        {% if dataset.is_readonly %}
-          <a class="btn btn-sm btn-secondary" href="{{ url_for('generic_query', dataset_name=dataset_name) }}">Query</a>
+        {% if session.user_id %}
+          {% if enable_load or enable_filesystem %}
+            <a class="btn btn-sm btn-primary" href="{{ url_for('load', dataset_name=dataset_name) }}">Add Database...</a>
+          {% endif %}
+          {% if datasets|length() > 1 and (enable_load or enable_filesystem) %}
+            <a class="btn btn-sm btn-danger" href="{{ url_for('unload') }}?dataset={{ dataset.basename }}" style="margin-left: 3px;">Unload Database...</a>
+          {% endif %}
         {% else %}
-          <form action="{{ url_for('table_create', dataset_name=dataset_name) }}" class="form-inline" method="post">
-            <input name="redirect" type="hidden" value="{{ request.full_path }}" />{# full-path begins with "/" and includes querystring #}
-            <input class="form-control form-control-sm" name="table_name" placeholder="new_table_name" />
-            <button class="btn btn-primary btn-sm" type="submit">Create</button>
-            &nbsp;
-            <a class="btn btn-sm btn-secondary" href="{{ url_for('generic_query', dataset_name=dataset_name) }}">Query</a>
-          </form>
-        {% endif %}
-        {% if datasets|length() > 1 and (enable_load or enable_filesystem) %}
-          <a class="btn btn-sm btn-danger" href="{{ url_for('unload') }}?dataset={{ dataset.basename }}" style="margin-left: 3px;">Unload Database</a>
+            <a class="btn btn-sm btn-primary" href="{{ url_for('generic_query', dataset_name=dataset_name) }}">Query...</a>
         {% endif %}
         <div class="col-2" id="sidebar">
           {% block sidebar %}{% endblock %}

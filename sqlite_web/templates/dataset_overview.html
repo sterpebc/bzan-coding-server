@@ -1,13 +1,13 @@
 {% extends "base_tables.html" %}
 
-{% block title %}Dataset Overview: {{ dataset_name }}{% endblock %}
+{% block title %}Database Overview: {{ dataset_name }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-12">
       <h1>Dataset: <strong>{{ dataset_name }}</strong></h1>
-      <p>This page provides an overview of the tables and views within the <strong>{{ dataset_name }}</strong> dataset.</p>
+      <p>This page provides an overview of the tables and views within the <strong>{{ dataset_name }}</strong> database.</p>
 
       <h3 class="mt-4">Tables</h3>
       {% if dataset.tables %}
@@ -17,7 +17,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p>This dataset contains no tables.</p>
+        <p>This database contains no tables.</p>
       {% endif %}
     </div>
   </div>
