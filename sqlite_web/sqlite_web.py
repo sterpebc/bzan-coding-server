@@ -25,7 +25,11 @@ from werkzeug.utils import secure_filename, redirect
 from werkzeug.security import check_password_hash
 
 try:
+    # The datastore module is now in the parent directory.
+    # We add the parent directory to the path to make it importable.
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     import datastore
+    sys.path.pop(0)
 except ImportError:
     datastore = None
 

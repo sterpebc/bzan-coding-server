@@ -136,6 +136,34 @@ class FirestoreDatastore:
         self.user_collection.document(username).delete()
 
 
+    def get_api_document(self, domain, collection_name, document_id):
+        """Retrieves a single document from a generic API collection."""
+        collection_path = f"api_domains/{domain}/{collection_name}"
+        doc_ref = self.db.collection(collection_path).document(document_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            return doc.to_dict()
+        return None
+
+    def query_api_collection(self, domain, collection_name, **filters):
+        """
+        Queries a generic API collection with optional key-value filters.
+        """
+        collection_path = f"api_domains/{domain}/{collection_name}"
+        query = self.db.collection(collection_path)
+
+        for field, value in filters.items():
+            # Firestore's Python client library automatically converts string
+            # numbers to numeric types for queries where appropriate.
+            try:
+                # Attempt to convert to int if possible (e.g., for IDs)
+                value = int(value)
+            except (ValueError, TypeError):
+                pass
+            query = query.where(field, '==', value)
+
+        docs = query.stream()
+        return [doc.to_dict() for doc in docs]
 # Singleton instance to be used by the application.
 datastore = FirestoreDatastore() if firestore else None
 cloud_storage = CloudStorage() if storage else None

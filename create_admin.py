@@ -14,16 +14,13 @@ import getpass
 import os
 import sys
 
-# Add the 'sqlite_web' directory to the Python path to allow importing the datastore module.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sqlite_web'))
-
 try:
     # It's important to set the project before importing the datastore
     # if it's not already set in the environment.
     if 'GOOGLE_CLOUD_PROJECT' not in os.environ:
         os.environ['GOOGLE_CLOUD_PROJECT'] = 'bzan-coding-server'
 
-    from sqlite_web import datastore
+    import datastore
     from werkzeug.security import generate_password_hash
 except ImportError as e:
     print(f"Error importing necessary libraries: {e}", file=sys.stderr)

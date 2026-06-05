@@ -46,12 +46,22 @@ default_sqlite_web_config = {
 
 sqlite_web_mod.initialize_app(default_config=default_sqlite_web_config)
 
+# --- API App ---
+# Import and configure the API application
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api'))
+try:
+    from api import app as api_app
+except (ImportError, ModuleNotFoundError) as e:
+    main_app.logger.error(f"Could not import the API app: {e}")
+    api_app = None
+
 # --- Combined App ---
 # Use DispatcherMiddleware to combine the two apps.
 # Your main app will handle the root URL ('/').
 # The sqlite_web_app will handle everything under '/db'.
 application = DispatcherMiddleware(main_app, {
-    '/db': sqlite_web_app if sqlite_web_app else main_app
+    '/db': sqlite_web_app if sqlite_web_app else main_app,
+    '/api': api_app if api_app else main_app
 })
 
 # --- Proxy App for `flask run` ---

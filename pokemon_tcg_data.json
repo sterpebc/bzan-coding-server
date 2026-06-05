@@ -1,0 +1,22 @@
+{
+  "sets": [
+    {"id": "base1", "name": "Base Set", "releaseDate": "1999-01-09T00:00:00Z", "totalCards": 102},
+    {"id": "jungle", "name": "Jungle", "releaseDate": "1999-06-16T00:00:00Z", "totalCards": 64},
+    {"id": "fossil", "name": "Fossil", "releaseDate": "1999-10-10T00:00:00Z", "totalCards": 62}
+  ],
+  "cards": [
+    {"id": "base1-4", "name": "Charizard", "setId": "base1", "rarity": "Holo Rare", "type": "Fire", "hp": 120},
+    {"id": "base1-15", "name": "Venusaur", "setId": "base1", "rarity": "Holo Rare", "type": "Grass", "hp": 100},
+    {"id": "base1-58", "name": "Pikachu", "setId": "base1", "rarity": "Common", "type": "Lightning", "hp": 40},
+    {"id": "jungle-11", "name": "Snorlax", "setId": "jungle", "rarity": "Holo Rare", "type": "Colorless", "hp": 90},
+    {"id": "jungle-16", "name": "Vaporeon", "setId": "jungle", "rarity": "Non-Holo Rare", "type": "Water", "hp": 80},
+    {"id": "fossil-5", "name": "Dragonite", "setId": "fossil", "rarity": "Holo Rare", "type": "Colorless", "hp": 100},
+    {"id": "fossil-17", "name": "Articuno", "setId": "fossil", "rarity": "Holo Rare", "type": "Water", "hp": 70}
+  ],
+  "market_values": [
+    {"cardId": "base1-4", "grade": "PSA 9", "date": "2026-05-15T00:00:00Z", "value": 2500.00},
+    {"cardId": "base1-4", "grade": "PSA 8", "date": "2026-05-10T00:00:00Z", "value": 850.00},
+    {"cardId": "jungle-11", "grade": "PSA 9", "date": "2026-04-20T00:00:00Z", "value": 400.00},
+    {"cardId": "fossil-5", "grade": "PSA 9", "date": "2026-05-01T00:00:00Z", "value": 350.00}
+  ]
+}
