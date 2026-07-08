@@ -76,6 +76,59 @@ application = DispatcherMiddleware(main_app, {
     '/api': api_app if api_app else main_app
 })
 
+
+class ReverseProxied:
+    """
+    WSGI middleware that makes this app aware it's being served under a
+    path prefix by a reverse proxy (e.g. nginx proxying
+    http://host/coding-server/ through to this app's root).
+
+    Without this, Flask has no idea the prefix exists: it only ever sees
+    PATH_INFO with the prefix already stripped by nginx, so anything the
+    app generates itself -- redirect() targets, url_for() links -- comes
+    out WITHOUT the prefix. That's fine for direct requests, but a
+    post-login redirect (for example) would then send the browser to
+    "/" instead of "/coding-server/", missing the app entirely.
+
+    The fix is the standard WSGI pattern for this (see Flask's own docs
+    under "Proxy Setups"): the reverse proxy tells us what prefix it
+    stripped via a request header, and we set WSGI's SCRIPT_NAME
+    accordingly. Werkzeug/Flask's URL generation already knows to
+    respect SCRIPT_NAME automatically once it's set -- no other code
+    needs to change.
+
+    Expects nginx to set `proxy_set_header X-Script-Name /coding-server;`
+    (no trailing slash) on the location block that proxies to this app.
+    Requests made directly (no reverse proxy, e.g. local dev) are
+    unaffected since the header simply won't be present.
+    """
+
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        script_name = environ.get('HTTP_X_SCRIPT_NAME', '')
+        if script_name:
+            environ['SCRIPT_NAME'] = script_name
+            path_info = environ.get('PATH_INFO', '')
+            # Defensive: if the prefix is somehow still present in
+            # PATH_INFO (nginx configured without prefix-stripping), strip
+            # it here too rather than double-counting it.
+            if path_info.startswith(script_name):
+                environ['PATH_INFO'] = path_info[len(script_name):]
+
+        # Respect X-Forwarded-Proto too, so generated URLs are https:// if
+        # the proxy terminates TLS even though this app only ever speaks
+        # plain HTTP internally.
+        forwarded_proto = environ.get('HTTP_X_FORWARDED_PROTO', '')
+        if forwarded_proto:
+            environ['wsgi.url_scheme'] = forwarded_proto
+
+        return self.wsgi_app(environ, start_response)
+
+
+application = ReverseProxied(application)
+
 # --- Proxy App for `flask run` ---
 # The `flask run` command expects a Flask app instance. This proxy app
 # will wrap the DispatcherMiddleware and allow `flask run` to work correctly.

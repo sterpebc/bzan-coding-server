@@ -59,8 +59,14 @@ Running it
 
 Pick **one** of these, based on what access you have on the dev server.
 All three run the same command in the end
-(`gunicorn --bind 0.0.0.0:8080 --access-logfile - --error-logfile - app:application`);
+(`gunicorn --bind 127.0.0.1:8080 --access-logfile - --error-logfile - app:application`);
 they differ only in how the process survives logout/reboot.
+
+Note the bind address: `127.0.0.1`, not `0.0.0.0`. gunicorn only needs to be
+reachable from nginx running on the same machine (see "Putting nginx in
+front" below) -- it doesn't need to, and shouldn't, accept connections
+directly from the network. This also means no firewall rule is needed for
+port 8080 at all.
 
 Note the `--access-logfile`/`--error-logfile` flags: gunicorn's per-request
 access log is OFF by default (unlike Flask's dev server, which logs every
@@ -95,6 +101,34 @@ crontab -e
 
 Run `./scripts/restart_local.sh` by hand any time you redeploy.
 
+Putting nginx in front
+------------------------
+
+gunicorn is bound to `127.0.0.1:8080` (loopback only, see above), so on
+its own it's not reachable from anywhere except the dev server itself.
+nginx is what makes it reachable to students, proxying a path under this
+server's existing port-80 site through to gunicorn.
+
+See `deploy/nginx-default.conf` for the exact config (a full replacement
+for `/etc/nginx/conf.d/default.conf` that adds a `/coding-server/`
+location alongside the stock content already there) and install
+instructions in that file's header comment. In short:
+
+```bash
+sudo vi /etc/nginx/conf.d/default.conf
+# paste in deploy/nginx-default.conf's content, save
+sudo systemctl reload nginx
+```
+
+Once that's done, students reach the app at
+`http://<dev-server-hostname>/coding-server/` -- no port number, no
+firewall rule needed. `app.py` includes a small `ReverseProxied` WSGI
+middleware specifically so that login redirects and internal links work
+correctly under that `/coding-server/` prefix; if you ever change the
+path, update it in both `deploy/nginx-default.conf` (the `location` lines
+and the `X-Script-Name` header) and nowhere else -- the middleware picks
+the prefix up from that header automatically.
+
 Redeploying after code changes
 --------------------------------
 
@@ -119,6 +153,10 @@ What changed from the original GCP version
 - Nothing here needs `GOOGLE_APPLICATION_CREDENTIALS` or a service
   account key anymore; you can delete `.secrets/` once you've confirmed
   the app runs.
+- Added a `ReverseProxied` WSGI middleware in `app.py` and an nginx config
+  (`deploy/nginx-default.conf`) so the app can be reached at a clean path
+  like `/coding-server/` through nginx, with gunicorn itself locked down
+  to loopback-only.
 
 If you still want Docker
 --------------------------

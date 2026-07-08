@@ -29,7 +29,12 @@ echo "Starting gunicorn..."
 # (one line per request) is OFF by default, unlike Flask's dev server which
 # logs every request automatically. '-' means "write to stdout/stderr",
 # which the nohup redirect below then captures into LOGFILE.
-nohup ./.venv/bin/gunicorn --bind 0.0.0.0:8080 \
+#
+# Bound to 127.0.0.1 (loopback only), not 0.0.0.0: nginx is now the only
+# thing that talks to this directly (see deploy/nginx-default.conf), so
+# there's no need for gunicorn to accept connections from the network at
+# all -- and no firewall rule is needed for this port as a result.
+nohup ./.venv/bin/gunicorn --bind 127.0.0.1:8080 \
     --access-logfile - --error-logfile - \
     "app:application" \
     >> "$LOGFILE" 2>&1 &

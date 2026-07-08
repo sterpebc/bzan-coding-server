@@ -12,7 +12,10 @@ EnvironmentFile=/path/to/CodingServer/.env
 # --access-logfile/--error-logfile are both required: gunicorn's access log
 # (one line per request) is OFF by default. '-' sends both to stdout/stderr,
 # which systemd captures into the journal automatically (see `journalctl` below).
-ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 0.0.0.0:8080 --access-logfile - --error-logfile - app:application
+# Bound to 127.0.0.1 (loopback only): nginx is the only thing that should
+# talk to this directly -- see deploy/nginx-default.conf. No firewall rule
+# is needed for this port as a result.
+ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 127.0.0.1:8080 --access-logfile - --error-logfile - app:application
 Restart=on-failure
 RestartSec=5
 
