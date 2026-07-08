@@ -25,7 +25,13 @@ if [ -f ".env" ]; then
 fi
 
 echo "Starting gunicorn..."
-nohup ./.venv/bin/gunicorn --bind 0.0.0.0:8080 "app:application" \
+# --access-logfile/--error-logfile are both required: gunicorn's access log
+# (one line per request) is OFF by default, unlike Flask's dev server which
+# logs every request automatically. '-' means "write to stdout/stderr",
+# which the nohup redirect below then captures into LOGFILE.
+nohup ./.venv/bin/gunicorn --bind 0.0.0.0:8080 \
+    --access-logfile - --error-logfile - \
+    "app:application" \
     >> "$LOGFILE" 2>&1 &
 echo $! > "$PIDFILE"
 disown

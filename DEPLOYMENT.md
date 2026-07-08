@@ -59,8 +59,14 @@ Running it
 
 Pick **one** of these, based on what access you have on the dev server.
 All three run the same command in the end
-(`gunicorn --bind 0.0.0.0:8080 app:application`); they differ only in
-how the process survives logout/reboot.
+(`gunicorn --bind 0.0.0.0:8080 --access-logfile - --error-logfile - app:application`);
+they differ only in how the process survives logout/reboot.
+
+Note the `--access-logfile`/`--error-logfile` flags: gunicorn's per-request
+access log is OFF by default (unlike Flask's dev server, which logs every
+request automatically), so these are required if you want to see request
+activity in your logs at all. `-` means "write to stdout/stderr," which
+each option below captures into a log file or the journal for you.
 
 **Option 1 -- system-level systemd (best, needs sudo once)**
 

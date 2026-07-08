@@ -9,7 +9,10 @@ User=CHANGE_ME
 # CHANGE ME: absolute path to where you cloned/deployed the app.
 WorkingDirectory=/path/to/CodingServer
 EnvironmentFile=/path/to/CodingServer/.env
-ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 0.0.0.0:8080 app:application
+# --access-logfile/--error-logfile are both required: gunicorn's access log
+# (one line per request) is OFF by default. '-' sends both to stdout/stderr,
+# which systemd captures into the journal automatically (see `journalctl` below).
+ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 0.0.0.0:8080 --access-logfile - --error-logfile - app:application
 Restart=on-failure
 RestartSec=5
 

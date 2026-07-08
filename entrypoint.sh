@@ -17,5 +17,8 @@ if [ "$MODE" = "dev" ]; then
     exec flask --app app --debug run --host 0.0.0.0 --port 8080
 else
     # Production mode (default): Use Gunicorn for a robust production server.
-    exec gunicorn --bind 0.0.0.0:8080 "app:application"
+    # --access-logfile/--error-logfile are both required: gunicorn's access
+    # log (one line per request) is OFF by default. '-' sends both to
+    # stdout/stderr, which `docker logs` (or journald, outside Docker) picks up.
+    exec gunicorn --bind 0.0.0.0:8080 --access-logfile - --error-logfile - "app:application"
 fi
