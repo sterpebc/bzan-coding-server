@@ -51,3 +51,7 @@ data/
 .flask_secret_key
 gunicorn.log
 .gunicorn.pid
+
+# Sample .db fixtures for manually testing the upload/browse feature.
+# Already covered by the *.db rule above; listed for clarity.
+samples/*.db
