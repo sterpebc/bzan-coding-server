@@ -52,6 +52,8 @@ data/
 gunicorn.log
 .gunicorn.pid
 
-# Sample .db fixtures for manually testing the upload/browse feature.
-# Already covered by the *.db rule above; listed for clarity.
+# Sample data for manually testing the upload/browse and seed-data features.
+# Source of truth for these lives outside the repo (colleagues supply them,
+# or they're regenerated locally), so they're never tracked.
 samples/*.db
+samples/*.json
