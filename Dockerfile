@@ -3,17 +3,6 @@ FROM python:3.12-slim AS base
 
 WORKDIR /app
 
-# Install Google Cloud CLI
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl gnupg && \
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-      | gpg --dearmor -o /usr/share/keyrings/google-cloud-sdk.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/google-cloud-sdk.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
-      > /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends google-cloud-sdk && \
-    rm -rf /var/lib/apt/lists/*
-
 # Copy dependency definition first to leverage Docker layer caching
 COPY requirements.txt ./
 # Install all Python dependencies in a single, consolidated RUN command
@@ -30,6 +19,6 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 FROM base AS dev
 ENV MODE=dev
 
-# Production image: optimized command for Cloud Run
+# Production image
 FROM base AS prod
 ENV MODE=prod

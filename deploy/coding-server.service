@@ -1,0 +1,28 @@
+[Unit]
+Description=Coding Server (Flask/gunicorn) for classroom exercises
+After=network.target
+
+[Service]
+Type=simple
+# CHANGE ME: the account this should run as on the dev server.
+User=CHANGE_ME
+# CHANGE ME: absolute path to where you cloned/deployed the app.
+WorkingDirectory=/path/to/CodingServer
+EnvironmentFile=/path/to/CodingServer/.env
+ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 0.0.0.0:8080 app:application
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+# --- Install (requires sudo/root) ---
+#   sudo cp coding-server.service /etc/systemd/system/coding-server.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now coding-server
+#
+# --- Update after a deploy ---
+#   sudo systemctl restart coding-server
+#
+# --- Logs ---
+#   sudo journalctl -u coding-server -f

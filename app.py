@@ -16,8 +16,10 @@ main_app = Flask(__name__)
 def hello():
     """Return a friendly HTTP greeting."""
     message = "The application is running successfully!"
-    service = os.environ.get('K_SERVICE', 'Unknown service')
-    revision = os.environ.get('K_REVISION', 'Unknown revision')
+    # K_SERVICE/K_REVISION were set automatically by Cloud Run. On a plain
+    # server they won't exist, so fall back to something locally meaningful.
+    service = os.environ.get('K_SERVICE', os.environ.get('APP_NAME', 'coding-server'))
+    revision = os.environ.get('K_REVISION', f"pid-{os.getpid()}")
     return render_template('index.html',
                            message=message,
                            Service=service,
@@ -34,12 +36,22 @@ import sqlite_web as sqlite_web_mod
 sqlite_web_app = sqlite_web_mod.app if sqlite_web_mod else None
 
 # Define the default configuration for sqlite-web. This will be used
-# on the first run and saved to Firestore for subsequent runs.
+# on the first run and saved to the local datastore (see datastore.py)
+# for subsequent runs.
+#
+# DB_UPLOAD_DIR controls where uploaded .db files are stored persistently.
+# Set the DB_UPLOAD_DIR environment variable in production (e.g. to a path
+# under /data on the dev server) so uploads survive a restart; if unset,
+# it falls back to a local ./data/uploads directory next to this file,
+# which is fine for local development but not for a shared server.
 default_sqlite_web_config = {
     'ENABLE_LOAD': True,
     'ENABLE_FILESYSTEM': False,
     'READ_ONLY': True,
-    'DB_UPLOAD_DIR': None,  # Defaults to a system temp directory
+    'DB_UPLOAD_DIR': os.environ.get(
+        'DB_UPLOAD_DIR',
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'uploads')
+    ),
     'ROWS_PER_PAGE': 50,
     'QUERY_ROWS_PER_PAGE': 1000,
 }

@@ -7,6 +7,7 @@ import logging
 import operator
 import os
 import re
+import secrets
 import sys
 import tempfile
 import threading
@@ -87,7 +88,48 @@ BLOB_AS_BASE64 = False  # Default is hex.
 ROWS_PER_PAGE = 50
 QUERY_ROWS_PER_PAGE = 1000
 TRUNCATE_VALUES = True
-SECRET_KEY = 'sqlite-database-browser-0.1.0'
+
+
+def _resolve_secret_key():
+    """
+    Returns the Flask session secret key.
+
+    This used to be hardcoded to a fixed, publicly-known string
+    ('sqlite-database-browser-0.1.0'), which meant anyone could forge a
+    valid session cookie for this app (e.g. to impersonate a logged-in
+    admin). Prefer the FLASK_SECRET_KEY environment variable; if that's
+    unset, fall back to a randomly-generated key persisted to disk next
+    to the local datastore, so it stays stable across restarts and is
+    shared by every gunicorn worker process. (A fresh random key per
+    process would silently invalidate everyone's session on every
+    restart, and across workers under multi-worker gunicorn.)
+    """
+    env_key = os.environ.get('FLASK_SECRET_KEY')
+    if env_key:
+        return env_key
+
+    if datastore and getattr(datastore, 'datastore', None):
+        state_dir = os.path.dirname(datastore.datastore.db_path)
+    else:
+        state_dir = os.path.join(CUR_DIR, '..', 'data')
+    state_dir = os.path.abspath(state_dir)
+    os.makedirs(state_dir, exist_ok=True)
+    key_path = os.path.join(state_dir, '.flask_secret_key')
+
+    if os.path.exists(key_path):
+        with open(key_path, 'r') as f:
+            existing_key = f.read().strip()
+        if existing_key:
+            return existing_key
+
+    new_key = secrets.token_hex(32)
+    fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as f:
+        f.write(new_key)
+    return new_key
+
+
+SECRET_KEY = _resolve_secret_key()
 
 app = Flask(
     __name__,

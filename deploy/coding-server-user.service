@@ -1,0 +1,35 @@
+[Unit]
+Description=Coding Server (Flask/gunicorn) for classroom exercises
+After=network.target
+
+[Service]
+Type=simple
+# CHANGE ME: absolute path to where you cloned/deployed the app.
+WorkingDirectory=/path/to/CodingServer
+EnvironmentFile=/path/to/CodingServer/.env
+ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 0.0.0.0:8080 app:application
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+
+# --- Install (no sudo required) ---
+#   mkdir -p ~/.config/systemd/user
+#   cp coding-server-user.service ~/.config/systemd/user/coding-server.service
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now coding-server
+#
+# --- Update after a deploy ---
+#   systemctl --user restart coding-server
+#
+# --- Logs ---
+#   journalctl --user -u coding-server -f
+#
+# --- IMPORTANT CAVEAT ---
+# User-level systemd services normally stop when you log out, unless an
+# administrator enables "lingering" for your account:
+#   sudo loginctl enable-linger <your-username>
+# That's a one-time favor to ask IT for. Without it, use option 3 in
+# DEPLOYMENT.md (the cron/nohup fallback) instead, which survives logout
+# and reboot with zero admin involvement.

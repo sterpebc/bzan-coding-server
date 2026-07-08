@@ -43,3 +43,11 @@ env/
 
 # SQLite database file
 *.db
+
+# Local application state (SQLite state db, uploaded db files, generated
+# session secret key) and process logs/pidfiles from the no-sudo deploy
+# fallback -- none of this belongs in version control.
+data/
+.flask_secret_key
+gunicorn.log
+.gunicorn.pid

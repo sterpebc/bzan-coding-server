@@ -1,5 +1,5 @@
 """
-A command-line script to create an initial admin user in Firestore.
+A command-line script to create an initial admin user in the local datastore.
 
 This script addresses the bootstrapping problem where you need to be a logged-in
 user to create a new user.
@@ -15,11 +15,6 @@ import os
 import sys
 
 try:
-    # It's important to set the project before importing the datastore
-    # if it's not already set in the environment.
-    if 'GOOGLE_CLOUD_PROJECT' not in os.environ:
-        os.environ['GOOGLE_CLOUD_PROJECT'] = 'bzan-coding-server'
-
     import datastore
     from werkzeug.security import generate_password_hash
 except ImportError as e:
@@ -28,7 +23,7 @@ except ImportError as e:
     sys.exit(1)
 
 def main():
-    """Creates a new user in the Firestore database."""
+    """Creates a new user in the local datastore."""
     parser = argparse.ArgumentParser(description="Create an admin user for the Coding Server.")
     parser.add_argument("username", help="The username for the new admin user.")
     args = parser.parse_args()
@@ -36,8 +31,7 @@ def main():
     username = args.username
 
     if not datastore.datastore:
-        print("Error: Firestore is not configured or the client library is not installed.", file=sys.stderr)
-        print("Please check your configuration and 'google-cloud-firestore' installation.", file=sys.stderr)
+        print("Error: the local datastore could not be initialized.", file=sys.stderr)
         sys.exit(1)
 
     # Check if user already exists
