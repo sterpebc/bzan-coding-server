@@ -1,0 +1,62 @@
+# Podman Quadlet unit for running Coding Server as a rootless, user-level
+# systemd service. This is prep for an optional container-based deployment
+# path -- it is NOT wired up or required. See DEPLOYMENT.md for the
+# current (non-container) production path this app actually uses, and
+# README_DOCKER.md for the plain `podman build`/`podman run` equivalent
+# of what this file automates.
+#
+# --- One-time setup (no sudo required) ---
+#   Build the image first (Podman must be installed by IT):
+#     podman build --target prod -t codingserver:prod .
+#
+#   Install the unit:
+#     mkdir -p ~/.config/containers/systemd
+#     cp deploy/coding-server.container ~/.config/containers/systemd/
+#     systemctl --user daemon-reload
+#     systemctl --user enable --now coding-server
+#
+#   Same caveat as deploy/coding-server-user.service: without
+#   `sudo loginctl enable-linger <you>`, this stops when you log out.
+#
+# --- Update after a deploy ---
+#   podman build --target prod -t codingserver:prod .
+#   systemctl --user restart coding-server
+#
+# --- Logs ---
+#   journalctl --user -u coding-server -f
+
+[Unit]
+Description=Coding Server (Flask/gunicorn, containerized) for classroom exercises
+After=network-online.target
+
+[Container]
+Image=localhost/codingserver:prod
+ContainerName=coding-server
+
+# Built locally -- there's no registry, so never try to pull.
+Pull=never
+
+# Same env file the non-container path uses (STATE_DB_PATH, DB_UPLOAD_DIR,
+# FLASK_SECRET_KEY, etc.). %h expands to your home directory; adjust the
+# rest of the path if the repo lives somewhere else.
+EnvironmentFile=%h/CodingServer/.env
+
+# Uncomment to run the dev server (hot-reload) instead of gunicorn:
+# Environment=MODE=dev
+
+# Matches DEPLOYMENT.md: bind loopback-only. nginx is the only thing that
+# should reach this directly -- no firewall rule needed as a result.
+PublishPort=127.0.0.1:8080:8080
+
+# Persistent SQLite state + uploaded DB files -- same path DEPLOYMENT.md
+# already sets up under /data/apidata. The ":Z" suffix is the SELinux
+# label Podman needs on RHEL/Fedora-family hosts; harmless if the host
+# isn't SELinux-enforcing.
+Volume=/data/apidata:/data/apidata:Z
+
+[Service]
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
