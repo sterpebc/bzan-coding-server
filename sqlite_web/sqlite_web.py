@@ -3,6 +3,7 @@ __version__ = '0.7.2'
 import base64
 import hashlib
 import importlib
+import json
 import logging
 import operator
 import os
@@ -628,6 +629,94 @@ def _add_dataset(enable_load, enable_filesystem, name=None):
             datastore.datastore.add_dataset(url_name, path)
 
     return dataset, None
+
+@app.route('/seed-api-data/', methods=['GET', 'POST'])
+@admin_required
+def seed_api_data():
+    """
+    Admin page for uploading a JSON file to seed the generic /api/<domain>/
+    document store -- the browser-based equivalent of running
+    `seed_api_data.py <domain> <file>` on the server. See that script for
+    the expected JSON shape: an object mapping collection names to lists
+    of documents.
+    """
+    if not datastore or not datastore.datastore:
+        flash('The API datastore is not configured.', 'danger')
+        return redirect(url_for('index'))
+
+    error = None
+    domain_name = request.form.get('domain', '').strip()
+
+    if request.method == 'POST':
+        overwrite = request.form.get('overwrite') == 'on'
+        upload = request.files.get('json_file')
+
+        if not domain_name:
+            error = 'A domain name is required.'
+        elif domain_name != secure_filename(domain_name):
+            # The domain becomes a URL path segment (/api/<domain>/<collection>),
+            # so keep it to characters that are safe there.
+            error = 'Domain name may only contain letters, numbers, dashes, underscores, and periods.'
+        elif not upload or not upload.filename:
+            error = 'A JSON file is required.'
+        else:
+            try:
+                payload = json.load(upload.stream)
+            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                error = f'"{upload.filename}" is not valid JSON: {exc}'
+            else:
+                if not isinstance(payload, dict):
+                    error = ('The JSON file must be an object mapping collection '
+                              'names to lists of documents -- see seed_api_data.py '
+                              'for the expected shape.')
+                else:
+                    seeded, skipped, malformed = [], [], []
+                    for collection_name, docs in payload.items():
+                        if not isinstance(docs, list):
+                            malformed.append(collection_name)
+                            continue
+
+                        already_seeded = not datastore.datastore.collection_is_empty(
+                            domain_name, collection_name)
+                        if already_seeded and not overwrite:
+                            skipped.append(collection_name)
+                            continue
+                        if already_seeded and overwrite:
+                            datastore.datastore.delete_api_collection(domain_name, collection_name)
+
+                        # Mirrors seed_api_data.py's id-field logic, but
+                        # generalized: use each document's own 'id' field
+                        # when every document in the collection has one,
+                        # otherwise auto-generate IDs (matching the CLI
+                        # script's hardcoded special-case for 'inventory',
+                        # without needing to hardcode a collection name here).
+                        id_field = 'id' if docs and all(
+                            isinstance(d, dict) and 'id' in d for d in docs
+                        ) else None
+                        count = datastore.datastore.bulk_add_api_documents(
+                            domain_name, collection_name, docs, id_field=id_field)
+                        seeded.append(f'{collection_name} ({count})')
+
+                    if malformed:
+                        flash(
+                            "Skipped collection(s) that weren't a list of documents: "
+                            + ', '.join(malformed), 'warning')
+                    if skipped:
+                        flash(
+                            "Skipped (already has data -- check \"Overwrite\" to replace): "
+                            + ', '.join(skipped), 'warning')
+                    if seeded:
+                        flash(f"Seeded into '{domain_name}': " + ', '.join(seeded), 'success')
+                        return redirect(url_for('seed_api_data'))
+                    elif not malformed and not skipped:
+                        error = 'The JSON file had no collections to seed.'
+
+    domains = datastore.datastore.list_api_domains()
+    return render_template(
+        'seed_api_data.html',
+        error=error,
+        domain_name=domain_name,
+        domains=domains)
 
 @app.route('/unload/', methods=['GET', 'POST'])
 @admin_required

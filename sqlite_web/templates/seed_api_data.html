@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Seed API Data{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Seed API Data</h2>
+  <p class="text-muted">
+    Upload a JSON file to populate the student-facing <code>/api/&lt;domain&gt;/&lt;collection&gt;</code>
+    endpoints -- the browser equivalent of running
+    <code>seed_api_data.py &lt;domain&gt; &lt;file&gt;</code> on the server. The file must be
+    a JSON object whose top-level keys are collection names, each mapping to a list of
+    documents (see <code>samples/supply_chain_data.json</code> in the repo for an example).
+  </p>
+
+  {% if error %}
+    <div class="alert alert-danger alert-dismissable">
+      <button class="close" type="button" data-dismiss="alert">&times;</button>
+      <strong>Error:</strong> {{ error }}
+    </div>
+  {% endif %}
+
+  <form action="{{ url_for('seed_api_data') }}" method="post" role="form" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="domain">Domain</label>
+      <input class="form-control" id="domain" name="domain" type="text"
+             value="{{ domain_name or '' }}" placeholder="e.g. supply_chain"
+             list="existing-domains" />
+      <datalist id="existing-domains">
+        {% for name in domains|sort %}
+          <option value="{{ name }}">
+        {% endfor %}
+      </datalist>
+      <small class="form-text text-muted">
+        Becomes the first segment of the URL
+        (<code>/api/&lt;domain&gt;/...</code>). Letters, numbers, dashes, underscores,
+        and periods only. Pick an existing domain from the list to add more collections
+        to it, or type a new one.
+      </small>
+    </div>
+    <div class="form-group">
+      <label for="json_file">JSON file</label>
+      <input class="form-control" id="json_file" name="json_file" type="file" accept="application/json,.json" />
+    </div>
+    <div class="form-group form-check">
+      <input class="form-check-input" id="overwrite" name="overwrite" type="checkbox" />
+      <label class="form-check-label" for="overwrite">
+        Overwrite collections that already have data (default: skip them, same as
+        <code>seed_api_data.py</code>)
+      </label>
+    </div>
+    <button class="btn btn-primary" type="submit">Seed</button>
+    <a class="btn btn-default" href="{{ url_for('index') }}">Cancel</a>
+  </form>
+
+  <hr />
+
+  <h3>Currently seeded</h3>
+  {% if domains %}
+    <table class="table table-striped table-bordered">
+      <thead class="thead-dark">
+        <tr>
+          <th>Domain</th>
+          <th>Collection</th>
+          <th>Documents</th>
+          <th>Example URL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for domain in domains|sort %}
+          {% for collection, count in domains[domain].items()|sort %}
+            <tr>
+              <td>{{ domain }}</td>
+              <td>{{ collection }}</td>
+              <td>{{ count }}</td>
+              <td><code>/api/{{ domain }}/{{ collection }}</code></td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Nothing has been seeded yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

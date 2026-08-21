@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>SQLite Web</title>
+    <title>Coding Server Admin</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -62,8 +62,9 @@
             </li>
         </ul>
         {% if session.user_id %}
+          <a class="btn btn-sm btn-primary" href="{{ url_for('seed_api_data') }}">Seed API Data...</a>
           {% if enable_load or enable_filesystem %}
-            <a class="btn btn-sm btn-primary" href="{{ url_for('load', dataset_name=dataset_name) }}">Add Database...</a>
+            <a class="btn btn-sm btn-primary" href="{{ url_for('load', dataset_name=dataset_name) }}" style="margin-left: 3px;">Add Database...</a>
           {% endif %}
           {% if datasets|length() > 1 and (enable_load or enable_filesystem) %}
             <a class="btn btn-sm btn-danger" href="{{ url_for('unload') }}?dataset={{ dataset.basename }}" style="margin-left: 3px;">Unload Database...</a>

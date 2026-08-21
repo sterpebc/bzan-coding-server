@@ -1,9 +1,9 @@
 #!/bin/sh
-# No-sudo fallback for (re)starting the Coding Server as a background
-# process using nohup, with a pidfile so this script can safely stop and
-# restart it. Meant to be paired with a user crontab @reboot entry so it
-# also comes back up automatically after the dev server reboots -- see
-# DEPLOYMENT.md, option 3.
+# (Re)starts the Coding Server as a background process on your laptop,
+# using nohup with a pidfile so this script can safely stop and restart
+# it. Meant for testing changes locally before `git pull`-ing them onto
+# the Vultr production host, which instead runs the app via the
+# deploy/coding-server.service systemd unit (see DEPLOYMENT.md).
 set -e
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,7 +18,13 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
     sleep 2
 fi
 
-if [ -f ".env" ]; then
+if [ -f ".env.local" ]; then
+    echo "Loading .env.local"
+    set -a
+    . ./.env.local
+    set +a
+elif [ -f ".env" ]; then
+    echo "Loading .env (no .env.local found)"
     set -a
     . ./.env
     set +a
@@ -35,6 +41,7 @@ echo "Starting gunicorn..."
 # there's no need for gunicorn to accept connections from the network at
 # all -- and no firewall rule is needed for this port as a result.
 nohup ./.venv/bin/gunicorn --bind 127.0.0.1:8080 \
+	--worker-class gthread --workers 1 --threads 4 \
     --access-logfile - --error-logfile - \
     "app:application" \
     >> "$LOGFILE" 2>&1 &

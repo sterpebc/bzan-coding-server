@@ -267,6 +267,39 @@ class LocalDatastore:
             )
         return len(rows)
 
+    def delete_api_collection(self, domain, collection_name):
+        """
+        Deletes every document in a generic API collection. Used by the
+        admin "Seed API Data" page's overwrite option, so re-seeding a
+        collection that already has data replaces it cleanly instead of
+        just upserting on top (which would leave behind any old documents
+        whose IDs aren't present in the new file).
+        """
+        with self._conn:
+            cur = self._conn.execute(
+                'DELETE FROM api_documents WHERE domain = ? AND collection_name = ?',
+                (domain, collection_name)
+            )
+        return cur.rowcount
+
+    def list_api_domains(self):
+        """
+        Returns `{domain: {collection_name: doc_count}}` for everything
+        seeded into the generic API document store, for display in the
+        admin UI (there's otherwise no way to see what's been seeded short
+        of querying the SQLite file directly or hitting every /api/... URL
+        by hand).
+        """
+        cur = self._conn.execute(
+            'SELECT domain, collection_name, COUNT(*) AS doc_count '
+            'FROM api_documents GROUP BY domain, collection_name '
+            'ORDER BY domain, collection_name'
+        )
+        result = {}
+        for row in cur.fetchall():
+            result.setdefault(row['domain'], {})[row['collection_name']] = row['doc_count']
+        return result
+
 
 # Singleton instance used by the rest of the application, mirroring the
 # shape of the old module (`datastore.datastore`, `datastore.cloud_storage`).
