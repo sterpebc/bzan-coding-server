@@ -153,6 +153,20 @@ class LocalDatastore:
 
     # --- Users -------------------------------------------------------------
 
+    @staticmethod
+    def _user_row_to_dict(row):
+        """Converts a `users` row to a dict, parsing `date_created` back
+        into a real `datetime` (it's stored as an ISO 8601 string, since
+        SQLite has no native datetime type). The old Firestore-backed
+        datastore handed back native datetime objects here, and templates
+        like users.html still call `.strftime()` on `date_created` --
+        parsing it back on the way out preserves that contract instead of
+        pushing the string/datetime distinction onto every caller."""
+        user = dict(row)
+        if user.get('date_created'):
+            user['date_created'] = datetime.fromisoformat(user['date_created'])
+        return user
+
     def get_user(self, username):
         """Retrieves a user record."""
         cur = self._conn.execute(
@@ -160,7 +174,7 @@ class LocalDatastore:
             'FROM users WHERE username = ?', (username,)
         )
         row = cur.fetchone()
-        return dict(row) if row else None
+        return self._user_row_to_dict(row) if row else None
 
     def get_all_users(self):
         """Retrieves all users."""
@@ -168,7 +182,7 @@ class LocalDatastore:
             'SELECT username, password_hash, created_by, date_created FROM users '
             'ORDER BY username'
         )
-        return [dict(row) for row in cur.fetchall()]
+        return [self._user_row_to_dict(row) for row in cur.fetchall()]
 
     def add_user(self, username, password_hash, created_by):
         """Adds a new user."""
