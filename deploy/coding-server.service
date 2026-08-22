@@ -15,7 +15,15 @@ EnvironmentFile=/path/to/CodingServer/.env
 # Bound to 127.0.0.1 (loopback only): nginx is the only thing that should
 # talk to this directly -- see deploy/nginx-default.conf. No firewall rule
 # is needed for this port as a result.
-ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 127.0.0.1:8080 --access-logfile - --error-logfile - app:application
+# --worker-class gthread --workers 1 --threads 4: a single sync worker
+# handles one request at a time, and a browser's idle keep-alive
+# connections can grab that one worker and block every other request
+# behind it (confirmed locally via py-spy: the worker was stuck inside
+# gunicorn's HTTP parser reading a connection with no data on it).
+# Threads (not more worker processes) because sqlite_web.py's `datasets`
+# dict is an in-memory per-process cache -- separate processes would each
+# have a stale copy, but threads within one process share it safely.
+ExecStart=/path/to/CodingServer/.venv/bin/gunicorn --bind 127.0.0.1:8080 --worker-class gthread --workers 1 --threads 4 --access-logfile - --error-logfile - app:application
 Restart=on-failure
 RestartSec=5
 

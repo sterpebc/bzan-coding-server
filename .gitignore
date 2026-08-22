@@ -41,6 +41,9 @@ env/
 # VS Code
 .vscode/
 
+# macOS Finder metadata
+.DS_Store
+
 # SQLite database file
 *.db
 
