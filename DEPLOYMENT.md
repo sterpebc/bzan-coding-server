@@ -129,6 +129,40 @@ path, update it in both `deploy/nginx-default.conf` (the `location` lines
 and the `X-Script-Name` header) and nowhere else -- the middleware picks
 the prefix up from that header automatically.
 
+Optional: rate-limiting scan probes with fail2ban
+----------------------------------------------------
+
+Any server with a public IP gets swept constantly by automated bots
+probing for exposed backup files, `.git/config`, known CMS/router
+exploit paths, and the like -- you'll see these in
+`/var/log/nginx/error.log` as `open() "..." failed (2: No such file or
+directory)` or `"..." is not found (2: No such file or directory)`
+lines. They're normal internet background noise (nginx correctly
+returns 404 for all of it, since none of that exists on this server),
+but `fail2ban` can temporarily block the source IPs to keep logs
+cleaner and cut down on pointless load.
+
+See `deploy/fail2ban/filter.d/nginx-404-probe.conf` and
+`deploy/fail2ban/jail.d/nginx-404-probe.conf` -- install instructions
+and reasoning are in each file's header comment. In short:
+
+```bash
+sudo apt install fail2ban
+sudo cp deploy/fail2ban/filter.d/nginx-404-probe.conf /etc/fail2ban/filter.d/nginx-404-probe.conf
+sudo cp deploy/fail2ban/jail.d/nginx-404-probe.conf   /etc/fail2ban/jail.d/nginx-404-probe.conf
+# Uncomment and fill in ignoreip in the installed copy under
+# /etc/fail2ban/jail.d/ (not the one in this repo) with your own IP,
+# so you can't lock yourself out.
+sudo fail2ban-regex /var/log/nginx/error.log /etc/fail2ban/filter.d/nginx-404-probe.conf
+sudo systemctl restart fail2ban
+sudo fail2ban-client status nginx-404-probe
+```
+
+The filter only matches nginx's own static-file-lookup failures for
+paths outside the app's proxied routes -- it deliberately does not
+match `connect() failed`/`upstream timed out` proxy errors, so a real
+app outage won't get anyone banned.
+
 Redeploying after code changes
 --------------------------------
 
