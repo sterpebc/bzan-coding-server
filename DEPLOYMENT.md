@@ -110,14 +110,25 @@ nginx is what makes it reachable to students, proxying a path under this
 server's existing port-80 site through to gunicorn.
 
 See `deploy/nginx-default.conf` for the exact config (a full replacement
-for `/etc/nginx/conf.d/default.conf` that adds a `/coding-server/`
-location alongside the stock content already there) and install
-instructions in that file's header comment. In short:
+for nginx's default site config that adds a `/coding-server/` location
+alongside the stock content already there) and install instructions in
+that file's header comment. Which file that is depends on how nginx was
+installed -- on a Debian/Ubuntu package install it's
+`/etc/nginx/sites-available/default`, not `conf.d/default.conf` (that
+directory exists but is unused/empty on this layout). Check with:
 
 ```bash
-sudo vi /etc/nginx/conf.d/default.conf
-# paste in deploy/nginx-default.conf's content, save
-sudo systemctl reload nginx
+ls /etc/nginx/sites-available/ /etc/nginx/conf.d/
+```
+
+If the live file already has `location` blocks for other apps sharing
+this nginx instance, merge this config's additions into it rather than
+pasting over it wholesale. In short:
+
+```bash
+sudo vi /etc/nginx/sites-available/default   # or conf.d/default.conf -- see above
+# merge in deploy/nginx-default.conf's content, save
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 Once that's done, students reach the app at
