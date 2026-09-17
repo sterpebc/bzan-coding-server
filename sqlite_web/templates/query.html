@@ -14,8 +14,7 @@
     formData.append('sql', queryText);
     formData.append('dataset_name', '{{ dataset_name }}');
     // Use sendBeacon to reliably send data on page unload.
-    // The URL is hardcoded as it's outside the dataset-specific routing.
-    navigator.sendBeacon('/db/save-query/', formData);
+    navigator.sendBeacon('{{ url_for("save_query") }}', formData);
   });
 </script>
 {% endblock %}
