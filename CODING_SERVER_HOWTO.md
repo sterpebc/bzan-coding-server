@@ -47,7 +47,7 @@ Once a dataset is loaded and selected:
 - /db/\<dataset_name\>/ — overview of the tables in that database.
 - /db/\<dataset_name\>/\<table\>/ — table structure (columns, indexes, foreign keys, triggers, the CREATE TABLE SQL).
 - /db/\<dataset_name\>/\<table\>/content/ — the actual rows, paginated (50/page by default), with inline add/edit/delete for admins.
-- /db/\<dataset_name\>/\<table\>/query/ — run an arbitrary SQL query scoped to that table's database.
+- /db/query/ — run an arbitrary SQL query against the whole database, not scoped to one table (reachable via the "Query..." link in the page header).
 - /db/\<dataset_name\>/\<table\>/export/ — export the table (CSV/JSON, per the on-page options).
 
 ### Loading a new .db file
