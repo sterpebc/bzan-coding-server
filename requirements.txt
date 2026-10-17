@@ -3,3 +3,4 @@ peewee
 pygments
 markupsafe
 gunicorn==20.1.0
+locust>=2.20
