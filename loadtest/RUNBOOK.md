@@ -51,6 +51,29 @@ apt update && apt install -y python3-pip
 pip install --break-system-packages locust
 ```
 
+(The `--break-system-packages` flag is needed because recent Ubuntu/Debian mark
+the system Python as "externally managed" (PEP 668) and refuse a plain `pip
+install` by default -- it's there to stop you from accidentally clobbering an
+apt-managed Python package. It's a safe override here, since this instance is
+disposable and gets destroyed right after the test anyway.)
+
+**Alternative: a virtual environment**, if you'd rather not override that
+protection at all -- e.g. you end up reusing this instance for something
+longer-lived, where it's worth keeping the habit:
+
+```bash
+ssh root@<temp-instance-ip>
+
+apt update && apt install -y python3-venv
+python3 -m venv ~/locust-env
+source ~/locust-env/bin/activate
+pip install locust
+```
+
+If you go this route, remember the venv doesn't stay activated across SSH
+reconnects -- run `source ~/locust-env/bin/activate` again before `locust` in
+the steps below, in any new session.
+
 ## 4. Get the test script onto the instance
 
 Easiest: paste the contents of `locustfile.py` (delivered alongside this
