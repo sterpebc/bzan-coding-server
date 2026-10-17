@@ -1512,12 +1512,6 @@ def table_delete(dataset_name, table, pk):
         table=table,
         table_pk=table_pk)
 
-@app.route('/<dataset_name>/<table>/query/', methods=['GET', 'POST'])
-@require_table
-@require_dataset
-def table_query(dataset_name, table):
-    return _query_view('table_query.html', table)
-
 def export(query, export_format, table=None):
     dataset = get_dataset()
     buf = StringIO()
