@@ -132,13 +132,60 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 Once that's done, students reach the app at
-`http://<dev-server-hostname>/coding-server/` -- no port number, no
-firewall rule needed. `app.py` includes a small `ReverseProxied` WSGI
+`https://bzancoding.dev/coding-server/` (or, generically,
+`http(s)://<dev-server-hostname>/coding-server/` if you're setting
+this up somewhere else) -- no port number, no firewall rule needed.
+See the HTTPS section below for how the real domain's TLS is set up.
+`app.py` includes a small `ReverseProxied` WSGI
 middleware specifically so that login redirects and internal links work
 correctly under that `/coding-server/` prefix; if you ever change the
 path, update it in both `deploy/nginx-default.conf` (the `location` lines
 and the `X-Script-Name` header) and nowhere else -- the middleware picks
 the prefix up from that header automatically.
+
+HTTPS
+------
+
+This app (and the Game Server sharing the box) is now also reachable
+over HTTPS at **bzancoding.dev**, alongside the existing plain-HTTP
+setup described above.
+
+- **Domain:** `bzancoding.dev`, registered via Cloudflare Registrar,
+  with one DNS A record (`@`) pointing at the server's IP, set to
+  **DNS only** (not proxied) -- Cloudflare is just the DNS host here;
+  TLS termination happens on this box via certbot/nginx, not at
+  Cloudflare's edge.
+- **Certificate:** `certbot` (installed via `snap install --classic
+  certbot`) with its nginx plugin:
+  `sudo certbot --nginx -d bzancoding.dev --no-redirect`. This added
+  `listen 443 ssl` / `ssl_certificate*` lines directly into the
+  shared `server {}` block (the one proxying both `/coding-server/`
+  and `/game-server/`) -- see the header comment in
+  `deploy/nginx-default.conf` for what those typically look like;
+  that repo file doesn't reproduce them verbatim, since certbot owns
+  and renews them on its own.
+- **Renewal:** automatic via the certbot snap's own systemd timer;
+  `certbot renew --dry-run` has been verified to succeed.
+- **HSTS:** `.dev` ships in browsers' built-in HSTS preload list, so
+  browsers refuse plain `http://` for this domain outright, with no
+  click-through option. Any internally-generated `http://` link
+  would silently break pages for visitors -- the `ReverseProxied`
+  middleware already guards against this by honoring
+  `X-Forwarded-Proto` (see "Putting nginx in front" above).
+- **The http -> https redirect:** intentionally not enabled yet. It
+  waits until every distributed config for *both* apps on this box
+  points at `https://`, because a 301 silently turns a POST into a
+  GET and drops its body in many clients (including Python's
+  `requests` by default). This app's own exposure is narrow (`/api/`
+  is GET-only; the POST routes under `/db/` are either browser-driven
+  from an already-HTTPS page, or hit by tooling now pointed at
+  `https://` directly) -- but the Game Server's entire client
+  protocol is POST-based and used by many independently-configured
+  student scripts, so when the redirect does go in, it's worth using
+  a **308** (preserves method and body) rather than certbot's
+  `--redirect` flag, which always writes a 301 -- add `return 308
+  https://$host$request_uri;` to the port-80 block by hand instead;
+  cert issuance/renewal isn't affected either way.
 
 Optional: rate-limiting scan probes with fail2ban
 ----------------------------------------------------
