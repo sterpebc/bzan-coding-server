@@ -2,7 +2,7 @@
 
 A cheat sheet for using the Coding Server (the "coding exercises" app — home page, SQLite database browser, and a JSON API that serves sample data to students). Written for infrequent use: if you've forgotten how any of this works, start here before digging into the repo.
 
-**Base URL:** http://155.138.216.76/coding-server/
+**Base URL:** https://bzancoding.dev/coding-server/
 
 It runs on the same Vultr box as the Game Server, reachable through nginx at the /coding-server/ path (no port number needed). All URLs below are relative to that base.
 
@@ -10,7 +10,7 @@ It runs on the same Vultr box as the Game Server, reachable through nginx at the
 
 ## 1. Is it even running? (30-second smoke test)
 
-    curl -s http://155.138.216.76/coding-server/
+    curl -s https://bzancoding.dev/coding-server/
 
 If it's up, you'll get back an HTML page whose body includes:
 
@@ -20,7 +20,7 @@ That's the fastest possible check — no login, no auth, just confirms gunicorn/
 
 A slightly more useful check, since it also proves the API layer and the datastore are working:
 
-    curl -s http://155.138.216.76/coding-server/api/supply_chain/products
+    curl -s https://bzancoding.dev/coding-server/api/supply_chain/products
 
 This should return a JSON array of sample products (see §3 below). An empty [] means the app is up but that domain hasn't been seeded; a 500 means the datastore itself has a problem.
 
@@ -30,7 +30,7 @@ This should return a JSON array of sample products (see §3 below). An empty [] 
 
 Despite the URL, /db/ isn't just a database browser — it's the whole login-protected admin panel: browsing/editing the .db files used in exercises (a customized fork of [sqlite-web](https://github.com/coleifer/sqlite-web), which is where the /db prefix comes from historically), managing your own and colleagues' accounts, *and* seeding the student-facing API data (see "Seeding API data" below) — that last one has nothing to do with SQLite datasets at all, it just happens to live under the same login-gated app, because /db and /api are two genuinely separate Flask apps stitched together in app.py (DispatcherMiddleware), and only the /db one has a login system. Students don't get accounts here.
 
-**Home:** http://155.138.216.76/coding-server/db/
+**Home:** https://bzancoding.dev/coding-server/db/
 
 - If no database is loaded yet, you'll be redirected to the **Load** page.
 - If exactly one database is loaded, you're taken straight into it.
@@ -38,7 +38,7 @@ Despite the URL, /db/ isn't just a database browser — it's the whole login-pro
 
 ### Logging in
 
-http://155.138.216.76/coding-server/db/login/ — username + password. There's no self-service signup; accounts are created either from the **Users** page (below, once you're logged in) or from the command line with create_admin.py (§4) if you don't have any account yet.
+https://bzancoding.dev/coding-server/db/login/ — username + password. There's no self-service signup; accounts are created either from the **Users** page (below, once you're logged in) or from the command line with create_admin.py (§4) if you don't have any account yet.
 
 ### Browsing a database
 
@@ -52,11 +52,11 @@ Once a dataset is loaded and selected:
 
 ### Loading a new .db file
 
-http://155.138.216.76/coding-server/db/load/ — upload a new SQLite file from your machine (or, if filesystem loading is enabled, point at a path on the server). Uploaded files persist under the DB_UPLOAD_DIR configured in .env (currently /root/data/uploads), so they survive restarts and redeploys.
+https://bzancoding.dev/coding-server/db/load/ — upload a new SQLite file from your machine (or, if filesystem loading is enabled, point at a path on the server). Uploaded files persist under the DB_UPLOAD_DIR configured in .env (currently /root/data/uploads), so they survive restarts and redeploys.
 
 ### Seeding API data (no shell access needed)
 
-http://155.138.216.76/coding-server/db/seed-api-data/ — upload a JSON file to populate the student-facing /api/\<domain\>/\<collection\> endpoints (§3), without needing to SSH in and run seed_api_data.py (§4) by hand. Pick or type a domain name (existing ones autocomplete), upload the JSON file, and submit. The page also lists everything currently seeded — domain, collection, document count, and the resulting /api/... URL — which is now the fastest way to answer "what's actually loaded right now" (no more need for the raw sqlite3 query in §3).
+https://bzancoding.dev/coding-server/db/seed-api-data/ — upload a JSON file to populate the student-facing /api/\<domain\>/\<collection\> endpoints (§3), without needing to SSH in and run seed_api_data.py (§4) by hand. Pick or type a domain name (existing ones autocomplete), upload the JSON file, and submit. The page also lists everything currently seeded — domain, collection, document count, and the resulting /api/... URL — which is now the fastest way to answer "what's actually loaded right now" (no more need for the raw sqlite3 query in §3).
 
 By default it skips any collection in the file that already has data (same safety behavior as the CLI script), but there's an **Overwrite** checkbox if you actually want to replace one — unlike the CLI script, checking it does a real replace (deletes the collection's existing rows first), not just an upsert on top of what's there.
 
@@ -64,7 +64,7 @@ By default it skips any collection in the file that already has data (same safet
 
 ### Managing users
 
-http://155.138.216.76/coding-server/db/users/ — list existing accounts, add a new one, or delete one. http://.../db/change-password/ lets the logged-in user change their own password. This is the easiest way to give a colleague their own login without touching the server directly.
+https://bzancoding.dev/coding-server/db/users/ — list existing accounts, add a new one, or delete one. https://.../db/change-password/ lets the logged-in user change their own password. This is the easiest way to give a colleague their own login without touching the server directly.
 
 -----
 
@@ -111,18 +111,18 @@ Based on the fixtures in samples/ and the seeding commands in DEPLOYMENT.md, the
 
 **supply_chain** — collections products, warehouses, inventory.
 
-    curl -s http://155.138.216.76/coding-server/api/supply_chain/products
-    curl -s http://155.138.216.76/coding-server/api/supply_chain/products/1
-    curl -s "http://155.138.216.76/coding-server/api/supply_chain/products?unitPrice=199.99"
-    curl -s http://155.138.216.76/coding-server/api/supply_chain/warehouses
-    curl -s http://155.138.216.76/coding-server/api/supply_chain/inventory
+    curl -s https://bzancoding.dev/coding-server/api/supply_chain/products
+    curl -s https://bzancoding.dev/coding-server/api/supply_chain/products/1
+    curl -s "https://bzancoding.dev/coding-server/api/supply_chain/products?unitPrice=199.99"
+    curl -s https://bzancoding.dev/coding-server/api/supply_chain/warehouses
+    curl -s https://bzancoding.dev/coding-server/api/supply_chain/inventory
 
 **pokemon_tcg** — collections sets, cards, market_values.
 
-    curl -s http://155.138.216.76/coding-server/api/pokemon_tcg/cards
-    curl -s http://155.138.216.76/coding-server/api/pokemon_tcg/cards/base1-4
-    curl -s "http://155.138.216.76/coding-server/api/pokemon_tcg/cards?type=Fire"
-    curl -s http://155.138.216.76/coding-server/api/pokemon_tcg/sets
+    curl -s https://bzancoding.dev/coding-server/api/pokemon_tcg/cards
+    curl -s https://bzancoding.dev/coding-server/api/pokemon_tcg/cards/base1-4
+    curl -s "https://bzancoding.dev/coding-server/api/pokemon_tcg/cards?type=Fire"
+    curl -s https://bzancoding.dev/coding-server/api/pokemon_tcg/sets
 
 A 404 on a single-document request means that ID doesn't exist in that collection; an empty list [] on a collection request means the domain/collection hasn't been seeded (or the filter matched nothing).
 
