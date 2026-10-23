@@ -125,7 +125,7 @@ students for 15 minutes:
 ```bash
 API_PREFIX=/coding-server/api DB_PREFIX=/coding-server/db DB_DATASET=coworking \
 locust -f locustfile.py \
-    --host http://155.138.216.76 \
+    --host https://bzancoding.dev \
     --headless --users 240 --spawn-rate 2 --run-time 15m \
     --csv results-sustained
 ```
@@ -143,7 +143,7 @@ much higher spawn rate and a shorter hold:
 ```bash
 API_PREFIX=/coding-server/api DB_PREFIX=/coding-server/db DB_DATASET=coworking \
 locust -f locustfile.py \
-    --host http://155.138.216.76 \
+    --host https://bzancoding.dev \
     --headless --users 240 --spawn-rate 240 --run-time 2m \
     --csv results-spike
 ```

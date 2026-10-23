@@ -36,7 +36,7 @@ USAGE
     API_PREFIX=/coding-server/api DB_PREFIX=/coding-server/db \
     DB_DATASET=coworking \
     locust -f locustfile.py \
-        --host http://<server-ip-or-hostname> \
+        --host https://bzancoding.dev \
         --headless --users 240 --spawn-rate <N> --run-time 15m \
         --csv results/sustained
 
