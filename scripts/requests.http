@@ -1,6 +1,5 @@
 
-GET https://codingserver-500259956280.us-central1.run.app/
-Authorization: Bearer {{$dotenv IDENTITY_TOKEN}}
+GET https://bzancoding.dev/coding-server/
 
 ###
 
